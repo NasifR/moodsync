@@ -1,5 +1,9 @@
 "use client";
 import React, { useState } from 'react';
+import { useRouter } from "next/navigation";
+import { auth, db } from "../../../lib/firebaseConfig";
+import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, sendEmailVerification } from "firebase/auth";
+import { doc, setDoc } from "firebase/firestore";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,8 +13,60 @@ import { Heart, ArrowLeft } from 'lucide-react';
 
 
   export default function Signup() {
+    const router = useRouter();
+
+    type FormData = {
+      email: string;
+      password: string;
+      fullName: string;
+    };
+
+    const [formData, setFormData] = useState<FormData>({
+      email: "",
+      password: "",
+      fullName: "",
+    });
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const { name, value } = e.target;
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    };
 
     const [isLoading, setIsLoading] = useState(false);
+
+    const handleSignup = async () => {
+    // Validate form data
+    const { email, password, fullName } = formData;
+    if (!email || !password || !fullName) {
+      alert("Please fill in all fields.");
+    return;
+    }
+
+    try {
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        formData.email,
+        formData.password
+      );
+
+      const user = userCredential.user;
+
+      await setDoc(doc(db, "users", user.uid), {
+        fullName: formData.fullName,
+        email: formData.email,
+        createdAt: new Date(),
+      });
+
+      await sendEmailVerification(user);
+
+      alert("A verification link was sent to your email. Please check your inbox.");
+
+      router.push("/dashboard");
+    } catch (error) {
+      console.error(error);
+      alert("Signup failed. Error:" + error);
+    }
+  };
 
     return (
     <div className="bg-white min-h-screen flex items-center justify-center px-6 py-12">
