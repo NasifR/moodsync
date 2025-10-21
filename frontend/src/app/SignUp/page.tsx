@@ -156,7 +156,7 @@ import { Heart, ArrowLeft } from 'lucide-react';
                     <Label className="text-gray-600" htmlFor="fullName">Full Name</Label>
                     <Input
                       id="fullName"
-                      name="name"
+                      name="fullName"
                       type="text"
                       placeholder="John Doe"
                       required

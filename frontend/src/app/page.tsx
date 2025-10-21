@@ -45,7 +45,7 @@ export default function LandingPage() {
               </div>
 
               <div className="flex flex-col sm:flex-row gap-4">
-                <Button onClick={handleGetStarted} className="bg-purple-600 hover:bg-black hover:cursor-pointer hover:shadow-xl hover:shadow-purple-600 text-lg px-8 py-5 transition-all">
+                <Button onClick={handleGetStarted} className="bg-purple-600 hover:bg-black hover:cursor-pointer hover:text-white hover:shadow-xl hover:shadow-purple-600 text-lg px-8 py-5 transition-all">
                   Start Your Journey
                 </Button>
                 <Button variant="outline" className="text-lg px-8 py-5 bg-white border-purple-300 hover:border-black text-purple-700 hover:bg-black hover:text-white hover:shadow-xl hover:shadow-purple-600 transition-all">
