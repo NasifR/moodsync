@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useRouter } from "next/navigation";
 import { auth, db } from "../../../lib/firebaseConfig";
-import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, sendEmailVerification } from "firebase/auth";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, sendEmailVerification } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -68,13 +68,24 @@ import { Heart, ArrowLeft } from 'lucide-react';
     }
   };
 
+  const handleLogin = async () => {
+    try {
+      await signInWithEmailAndPassword(auth, formData.email, formData.password);
+      router.push("/");
+    } catch (error) {
+      console.log(error);
+      alert("Login failed. Error: " + error);
+    }
+  };
+
     return (
-    <div className="bg-white min-h-screen flex items-center justify-center px-6 py-12">
+    <div className="bg-gradient-to-br from-purple-200 via-white to-blue-100 min-h-screen flex items-center justify-center px-6 py-12">
       <div className="w-full max-w-md">
         <div className="flex items-center justify-center mb-8">
           <Button
             variant="ghost"
-            className="absolute left-6 top-6"
+            className="absolute left-6 top-6 text-black hover:bg-purple-300"
+            onClick={() => router.push("/")}
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
@@ -87,8 +98,8 @@ import { Heart, ArrowLeft } from 'lucide-react';
 
         <Card className="border-purple-200 shadow-xl">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl">Welcome</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-2xl text-black">Welcome</CardTitle>
+            <CardDescription className="text-gray-600">
               Sign in to your account or create a new one to start tracking your emotional wellbeing
             </CardDescription>
           </CardHeader>
@@ -100,30 +111,31 @@ import { Heart, ArrowLeft } from 'lucide-react';
               </TabsList>
               
               <TabsContent value="login">
-                <form className="space-y-4">
+                <form className="space-y-4 mt-4">
                   <div className="space-y-2">
-                    <Label htmlFor="login-email">Email</Label>
+                    <Label className="text-gray-600" htmlFor="email">Email</Label>
                     <Input
-                      id="login-email"
+                      id="email"
                       name="email"
                       type="email"
                       placeholder="your@email.com"
                       required
-                      className="border-purple-200 focus:border-purple-500"
+                      className="border-purple-200 focus:border-purple-500 text-gray-500"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="login-password">Password</Label>
+                    <Label className="text-gray-600" htmlFor="password">Password</Label>
                     <Input
-                      id="login-password"
+                      id="password"
                       name="password"
                       type="password"
                       placeholder="••••••••"
                       required
-                      className="border-purple-200 focus:border-purple-500"
+                      className="border-purple-200 focus:border-purple-500 text-gray-500"
                     />
                   </div>
-                  <Button 
+                  <Button
+                    onClick={handleLogin}
                     type="submit" 
                     className="w-full bg-purple-600 hover:bg-purple-700"
                     
@@ -139,52 +151,53 @@ import { Heart, ArrowLeft } from 'lucide-react';
               </TabsContent>
               
               <TabsContent value="signup">
-                <form className="space-y-4">
+                <form className="space-y-4 mt-4">
                   <div className="space-y-2">
-                    <Label htmlFor="signup-name">Full Name</Label>
+                    <Label className="text-gray-600" htmlFor="fullName">Full Name</Label>
                     <Input
-                      id="signup-name"
+                      id="fullName"
                       name="name"
                       type="text"
                       placeholder="John Doe"
                       required
-                      className="border-purple-200 focus:border-purple-500"
+                      className="border-purple-200 focus:border-purple-500 text-gray-500"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signup-email">Email</Label>
+                    <Label className="text-gray-600" htmlFor="signup-email">Email</Label>
                     <Input
                       id="signup-email"
                       name="email"
                       type="email"
                       placeholder="your@email.com"
                       required
-                      className="border-purple-200 focus:border-purple-500"
+                      className="border-purple-200 focus:border-purple-500 text-gray-500"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signup-password">Password</Label>
+                    <Label className="text-gray-600" htmlFor="signup-password">Password</Label>
                     <Input
                       id="signup-password"
                       name="password"
                       type="password"
                       placeholder="••••••••"
                       required
-                      className="border-purple-200 focus:border-purple-500"
+                      className="border-purple-200 focus:border-purple-500 text-gray-500"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signup-confirm-password">Confirm Password</Label>
+                    <Label className="text-gray-600" htmlFor="signup-confirm-password">Confirm Password</Label>
                     <Input
                       id="signup-confirm-password"
                       name="confirmPassword"
                       type="password"
                       placeholder="••••••••"
                       required
-                      className="border-purple-200 focus:border-purple-500"
+                      className="border-purple-200 focus:border-purple-500 text-gray-500"
                     />
                   </div>
                   <Button 
+                    onClick={handleSignup}
                     type="submit" 
                     className="w-full bg-purple-600 hover:bg-purple-700"
                     disabled={isLoading}

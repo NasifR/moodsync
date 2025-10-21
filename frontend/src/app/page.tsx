@@ -13,11 +13,11 @@ export default function LandingPage() {
   const router = useRouter();
 
   const handleGetStarted = () => {
-    router.push("/login"); // navigate to the login page
+    router.push("/SignUp"); // navigate to the login page
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-indigo-100">
     <div className="min-h-screen">
 
       {/* Navbar */}
