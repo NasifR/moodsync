@@ -1,84 +1,111 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { auth, db } from "../../../lib/firebaseConfig";
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, sendEmailVerification } from "firebase/auth";
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  sendEmailVerification,
+  onAuthStateChanged,
+} from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Heart, ArrowLeft } from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Heart, ArrowLeft } from "lucide-react";
 
+export default function Signup() {
+  const router = useRouter();
 
-  export default function Signup() {
-    const router = useRouter();
-
-    type FormData = {
-      email: string;
-      password: string;
-      fullName: string;
-    };
-
-    const [formData, setFormData] = useState<FormData>({
-      email: "",
-      password: "",
-      fullName: "",
+  // Redirect if user already logged in
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) router.push("/SurveyPage");
     });
+    return () => unsubscribe();
+  }, [router]);
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const { name, value } = e.target;
-      setFormData((prev) => ({ ...prev, [name]: value }));
-    };
+  type FormData = {
+    email: string;
+    password: string;
+    fullName: string;
+  };
 
-    const [isLoading, setIsLoading] = useState(false);
+  const [formData, setFormData] = useState<FormData>({
+    email: "",
+    password: "",
+    fullName: "",
+  });
 
-    const handleSignup = async () => {
-    // Validate form data
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSignup = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     const { email, password, fullName } = formData;
+
     if (!email || !password || !fullName) {
       alert("Please fill in all fields.");
-    return;
+      return;
     }
+
+    setIsLoading(true);
 
     try {
       const userCredential = await createUserWithEmailAndPassword(
         auth,
-        formData.email,
-        formData.password
+        email,
+        password
       );
-
       const user = userCredential.user;
 
       await setDoc(doc(db, "users", user.uid), {
-        fullName: formData.fullName,
-        email: formData.email,
+        fullName,
+        email,
         createdAt: new Date(),
       });
 
       await sendEmailVerification(user);
+      alert(
+        "A verification link was sent to your email. Please check your inbox."
+      );
 
-      alert("A verification link was sent to your email. Please check your inbox.");
-
-      router.push("/dashboard");
-    } catch (error) {
-      console.error(error);
-      alert("Signup failed. Error:" + error);
+      router.push("/SurveyPage");
+    } catch (error: any) {
+      console.error("Signup failed:", error);
+      alert("Signup failed. Error: " + error.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleLogin = async () => {
+  const handleLogin = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    setIsLoading(true);
     try {
       await signInWithEmailAndPassword(auth, formData.email, formData.password);
-      router.push("/");
-    } catch (error) {
+      router.push("/SurveyPage");
+    } catch (error: any) {
       console.log(error);
-      alert("Login failed. Error: " + error);
+      alert("Login failed. Error: " + error.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-    return (
+  return (
     <div className="bg-gradient-to-br from-purple-200 via-white to-blue-100 min-h-screen flex items-center justify-center px-6 py-12">
       <div className="w-full max-w-md">
         <div className="flex items-center justify-center mb-8">
@@ -100,124 +127,144 @@ import { Heart, ArrowLeft } from 'lucide-react';
           <CardHeader className="text-center">
             <CardTitle className="text-2xl text-black">Welcome</CardTitle>
             <CardDescription className="text-gray-600">
-              Sign in to your account or create a new one to start tracking your emotional wellbeing
+              Sign in to your account or create a new one to start tracking your
+              emotional wellbeing
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="login" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="login">Sign In</TabsTrigger>
-                <TabsTrigger value="signup">Sign Up</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-2 bg-gray-100 rounded-lg">
+                <TabsTrigger
+                  value="login"
+                  className="data-[state=active]:bg-purple-600 data-[state=active]:text-white text-black"
+                >
+                  Sign In
+                </TabsTrigger>
+                <TabsTrigger
+                  value="signup"
+                  className="data-[state=active]:bg-purple-600 data-[state=active]:text-white text-black"
+                >
+                  Sign Up
+                </TabsTrigger>
               </TabsList>
-              
+
+              {/* Login Tab */}
               <TabsContent value="login">
-                <form className="space-y-4 mt-4">
+                <form className="space-y-4 mt-4" onSubmit={handleLogin}>
                   <div className="space-y-2">
-                    <Label className="text-gray-600" htmlFor="email">Email</Label>
+                    <Label className="text-gray-600" htmlFor="email">
+                      Email
+                    </Label>
                     <Input
                       id="email"
                       name="email"
                       type="email"
                       placeholder="your@email.com"
                       required
+                      onChange={handleChange}
                       className="border-purple-200 focus:border-purple-500 text-gray-500"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-gray-600" htmlFor="password">Password</Label>
+                    <Label className="text-gray-600" htmlFor="password">
+                      Password
+                    </Label>
                     <Input
                       id="password"
                       name="password"
                       type="password"
                       placeholder="••••••••"
+                      onChange={handleChange}
                       required
                       className="border-purple-200 focus:border-purple-500 text-gray-500"
                     />
                   </div>
                   <Button
-                    onClick={handleLogin}
-                    type="submit" 
+                    type="submit"
                     className="w-full bg-purple-600 hover:bg-purple-700"
-                    
                   >
-                    {isLoading ? 'Signing in...' : 'Sign In'}
+                    {isLoading ? "Signing in..." : "Sign In"}
                   </Button>
                   <div className="text-center">
-                    <a href="#" className="text-sm text-purple-600 hover:text-purple-700">
+                    <a
+                      href="#"
+                      className="text-sm text-purple-600 hover:text-purple-700"
+                    >
                       Forgot your password?
                     </a>
                   </div>
                 </form>
               </TabsContent>
-              
+
+              {/* Signup Tab */}
               <TabsContent value="signup">
-                <form className="space-y-4 mt-4">
+                <form className="space-y-4 mt-4" onSubmit={handleSignup}>
                   <div className="space-y-2">
-                    <Label className="text-gray-600" htmlFor="fullName">Full Name</Label>
+                    <Label className="text-gray-600" htmlFor="fullName">
+                      Full Name
+                    </Label>
                     <Input
                       id="fullName"
                       name="fullName"
                       type="text"
                       placeholder="John Doe"
                       required
+                      onChange={handleChange}
                       className="border-purple-200 focus:border-purple-500 text-gray-500"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-gray-600" htmlFor="signup-email">Email</Label>
+                    <Label className="text-gray-600" htmlFor="signup-email">
+                      Email
+                    </Label>
                     <Input
                       id="signup-email"
                       name="email"
                       type="email"
                       placeholder="your@email.com"
+                      onChange={handleChange}
                       required
                       className="border-purple-200 focus:border-purple-500 text-gray-500"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-gray-600" htmlFor="signup-password">Password</Label>
+                    <Label className="text-gray-600" htmlFor="signup-password">
+                      Password
+                    </Label>
                     <Input
                       id="signup-password"
                       name="password"
                       type="password"
                       placeholder="••••••••"
                       required
+                      onChange={handleChange}
                       className="border-purple-200 focus:border-purple-500 text-gray-500"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label className="text-gray-600" htmlFor="signup-confirm-password">Confirm Password</Label>
-                    <Input
-                      id="signup-confirm-password"
-                      name="confirmPassword"
-                      type="password"
-                      placeholder="••••••••"
-                      required
-                      className="border-purple-200 focus:border-purple-500 text-gray-500"
-                    />
-                  </div>
-                  <Button 
-                    onClick={handleSignup}
-                    type="submit" 
+                  <Button
+                    type="submit"
                     className="w-full bg-purple-600 hover:bg-purple-700"
-                    disabled={isLoading}
                   >
-                    {isLoading ? 'Creating account...' : 'Create Account'}
+                    {isLoading ? "Creating account..." : "Create Account"}
                   </Button>
                 </form>
               </TabsContent>
             </Tabs>
 
             <div className="mt-6 text-center text-sm text-gray-500">
-              By continuing, you agree to our Terms of Service and Privacy Policy
+              By continuing, you agree to our Terms of Service and Privacy
+              Policy
             </div>
           </CardContent>
         </Card>
 
         <div className="mt-8 text-center">
           <p className="text-sm text-gray-600">
-            Need help? Contact us at{' '}
-            <a href="mailto:support@moodsync.com" className="text-purple-600 hover:text-purple-700">
+            Need help? Contact us at{" "}
+            <a
+              href="mailto:support@moodsync.com"
+              className="text-purple-600 hover:text-purple-700"
+            >
               support@moodsync.com
             </a>
           </p>
