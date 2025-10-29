@@ -1,14 +1,25 @@
 "use client";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { signOut, onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../../lib/firebaseConfig";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Heart } from "lucide-react";
 
 export default function SurveyPage() {
   const router = useRouter();
+  const [formData, setFormData] = useState({
+    sleepHours: "",
+    caffeineCups: "",
+    physicalActivity: "",
+    screenTime: "",
+    workStudyHours: "",
+    dayDescription: "",
+  });
 
-  // Redirect to signup if not logged in
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (!user) router.push("/SignUp");
@@ -21,20 +32,179 @@ export default function SurveyPage() {
     router.push("/SignUp");
   };
 
+  const handleNumberChange = (field: string, value: string) => {
+    if (value === "" || /^\d*\.?\d*$/.test(value)) {
+      setFormData((prev) => ({ ...prev, [field]: value }));
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    console.log("Survey submitted:", formData);
+  };
+
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-100 via-white to-purple-200">
-      <h1 className="text-3xl font-bold text-purple-700 mb-6">
-        Welcome to the Survey Page 🎉
-      </h1>
-      <p className="text-gray-700 mb-8">
-        You’re now logged in. Soon you’ll see your survey questions here.
-      </p>
-      <Button
-        onClick={handleLogout}
-        className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-xl"
-      >
-        Log Out
-      </Button>
+    <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-indigo-100">
+      <nav className="bg-white/70 backdrop-blur-sm border-b border-purple-200">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <Heart className="w-6 h-6 text-purple-600" />
+            <span className="text-xl font-bold text-gray-900">MoodSync</span>
+          </div>
+          <Button
+            onClick={handleLogout}
+            variant="outline"
+            className="border-purple-300 hover:border-black text-purple-700 hover:bg-black hover:text-white transition-all"
+          >
+            Log Out
+          </Button>
+        </div>
+      </nav>
+
+      <div className="max-w-4xl mx-auto px-6 py-12">
+        <div className="text-center mb-8">
+          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+            Daily Check-In
+          </h1>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            Help us understand your day better by sharing a few details about
+            your activities and feelings.
+          </p>
+        </div>
+
+        <Card className="p-8 md:p-10 shadow-2xl border-purple-200">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="sleepHours" className="text-gray-700 text-base">
+                How many hours did you sleep last night?
+              </Label>
+              <Input
+                id="sleepHours"
+                type="text"
+                inputMode="decimal"
+                value={formData.sleepHours}
+                onChange={(e) =>
+                  handleNumberChange("sleepHours", e.target.value)
+                }
+                placeholder="e.g., 7.5"
+                className="text-base py-5 border-purple-200 focus:border-purple-600"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="caffeineCups" className="text-gray-700 text-base">
+                How much caffeine (in cups) did you consume today?
+              </Label>
+              <Input
+                id="caffeineCups"
+                type="text"
+                inputMode="decimal"
+                value={formData.caffeineCups}
+                onChange={(e) =>
+                  handleNumberChange("caffeineCups", e.target.value)
+                }
+                placeholder="e.g., 2"
+                className="text-base py-5 border-purple-200 focus:border-purple-600"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label
+                htmlFor="physicalActivity"
+                className="text-gray-700 text-base"
+              >
+                Physical activity today (in minutes)
+              </Label>
+              <Input
+                id="physicalActivity"
+                type="text"
+                inputMode="numeric"
+                value={formData.physicalActivity}
+                onChange={(e) =>
+                  handleNumberChange("physicalActivity", e.target.value)
+                }
+                placeholder="e.g., 30"
+                className="text-base py-5 border-purple-200 focus:border-purple-600"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="screenTime" className="text-gray-700 text-base">
+                Screen time today (in hours)
+              </Label>
+              <Input
+                id="screenTime"
+                type="text"
+                inputMode="decimal"
+                value={formData.screenTime}
+                onChange={(e) =>
+                  handleNumberChange("screenTime", e.target.value)
+                }
+                placeholder="e.g., 6"
+                className="text-base py-5 border-purple-200 focus:border-purple-600"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label
+                htmlFor="workStudyHours"
+                className="text-gray-700 text-base"
+              >
+                Work/study load today (in hours)
+              </Label>
+              <Input
+                id="workStudyHours"
+                type="text"
+                inputMode="decimal"
+                value={formData.workStudyHours}
+                onChange={(e) =>
+                  handleNumberChange("workStudyHours", e.target.value)
+                }
+                placeholder="e.g., 8"
+                className="text-base py-5 border-purple-200 focus:border-purple-600"
+              />
+            </div>
+
+            <div className="space-y-2 pt-4">
+              <Label
+                htmlFor="dayDescription"
+                className="text-gray-700 text-base"
+              >
+                Tell us about your day
+              </Label>
+              <textarea
+                id="dayDescription"
+                value={formData.dayDescription}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    dayDescription: e.target.value,
+                  }))
+                }
+                placeholder="Share as much detail as you'd like about how you're feeling, what happened today, and anything else on your mind..."
+                rows={6}
+                className="w-full rounded-md border border-purple-200 px-3 py-3 text-base transition-[color,box-shadow] outline-none resize-none focus:border-purple-600 focus:ring-purple-600/50 focus:ring-[3px]"
+              />
+            </div>
+
+            <div className="pt-6">
+              <Button
+                type="submit"
+                className="w-full bg-purple-600 hover:bg-black hover:shadow-xl hover:shadow-purple-600 text-white text-lg py-6 transition-all"
+              >
+                Submit Check-In
+              </Button>
+            </div>
+          </form>
+        </Card>
+
+        <div className="text-center mt-8">
+          <p className="text-gray-600">
+            Your responses help us provide personalized insights about your
+            emotional wellbeing.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
