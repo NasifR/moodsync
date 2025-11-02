@@ -41,7 +41,7 @@ export function Navbar() {
         </nav>
 
         {/* CTA */}
-        <Link href="/auth">
+        <Link href="/SignUp">
           <Button className="bg-purple-600 hover:bg-purple-700">Get Started</Button>
         </Link>
       </div>

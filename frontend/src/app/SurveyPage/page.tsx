@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Heart } from "lucide-react";
+import { Navbar } from "@/components/Navbar";
 
 export default function SurveyPage() {
   const router = useRouter();
@@ -45,25 +46,10 @@ export default function SurveyPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-indigo-100">
-      <nav className="bg-white/70 backdrop-blur-sm border-b border-purple-200">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <Heart className="w-6 h-6 text-purple-600" />
-            <span className="text-xl font-bold text-gray-900">MoodSync</span>
-          </div>
-          <Button
-            onClick={handleLogout}
-            variant="outline"
-            className="border-purple-300 hover:border-black text-purple-700 hover:bg-black hover:text-white transition-all"
-          >
-            Log Out
-          </Button>
-        </div>
-      </nav>
-
+      <Navbar />
       <div className="max-w-4xl mx-auto px-6 py-12">
         <div className="text-center mb-8">
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 mt-10">
             Daily Check-In
           </h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
@@ -87,7 +73,7 @@ export default function SurveyPage() {
                   handleNumberChange("sleepHours", e.target.value)
                 }
                 placeholder="e.g., 7.5"
-                className="text-base py-5 border-purple-200 focus:border-purple-600"
+                className="py-5 text-gray-900 placeholder:text-gray-500 bg-white border border-purple-200 focus:border-purple-600 focus:ring-2 focus:ring-purple-300 focus:outline-none"
               />
             </div>
 
@@ -104,7 +90,7 @@ export default function SurveyPage() {
                   handleNumberChange("caffeineCups", e.target.value)
                 }
                 placeholder="e.g., 2"
-                className="text-base py-5 border-purple-200 focus:border-purple-600"
+                className="py-5 text-gray-900 placeholder:text-gray-500 bg-white border border-purple-200 focus:border-purple-600 focus:ring-2 focus:ring-purple-300 focus:outline-none"
               />
             </div>
 
@@ -124,7 +110,7 @@ export default function SurveyPage() {
                   handleNumberChange("physicalActivity", e.target.value)
                 }
                 placeholder="e.g., 30"
-                className="text-base py-5 border-purple-200 focus:border-purple-600"
+                className="py-5 text-gray-900 placeholder:text-gray-500 bg-white border border-purple-200 focus:border-purple-600 focus:ring-2 focus:ring-purple-300 focus:outline-none"
               />
             </div>
 
@@ -141,7 +127,7 @@ export default function SurveyPage() {
                   handleNumberChange("screenTime", e.target.value)
                 }
                 placeholder="e.g., 6"
-                className="text-base py-5 border-purple-200 focus:border-purple-600"
+                className="py-5 text-gray-900 placeholder:text-gray-500 bg-white border border-purple-200 focus:border-purple-600 focus:ring-2 focus:ring-purple-300 focus:outline-none"
               />
             </div>
 
@@ -161,7 +147,7 @@ export default function SurveyPage() {
                   handleNumberChange("workStudyHours", e.target.value)
                 }
                 placeholder="e.g., 8"
-                className="text-base py-5 border-purple-200 focus:border-purple-600"
+                className="py-5 text-gray-900 placeholder:text-gray-500 bg-white border border-purple-200 focus:border-purple-600 focus:ring-2 focus:ring-purple-300 focus:outline-none"
               />
             </div>
 
@@ -183,7 +169,7 @@ export default function SurveyPage() {
                 }
                 placeholder="Share as much detail as you'd like about how you're feeling, what happened today, and anything else on your mind..."
                 rows={6}
-                className="w-full rounded-md border border-purple-200 px-3 py-3 text-base transition-[color,box-shadow] outline-none resize-none focus:border-purple-600 focus:ring-purple-600/50 focus:ring-[3px]"
+                className="w-full text-gray-900 bg-white placeholder:text-gray-500 rounded-md border border-purple-200 px-3 py-3 text-base transition-[color,box-shadow] outline-none resize-none focus:border-purple-600 focus:ring-purple-600/50 focus:ring-[3px]"
               />
             </div>
 
