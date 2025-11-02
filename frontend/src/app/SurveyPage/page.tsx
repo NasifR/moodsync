@@ -2,7 +2,8 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { signOut, onAuthStateChanged } from "firebase/auth";
-import { auth } from "../../../lib/firebaseConfig";
+import { doc, setDoc, collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { auth, db } from "../../../lib/firebaseConfig";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -39,10 +40,39 @@ export default function SurveyPage() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log("Survey submitted:", formData);
-  };
+  // handle form submit by adding data to Firestore
+  const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+
+  const user = auth.currentUser;
+  if (!user) {
+    alert("You must be logged in to submit.");
+    router.push("/SignUp");
+    return;
+  }
+
+  try {
+    // Create a new document inside a user-specific subcollection
+    await addDoc(collection(db, "users", user.uid, "checkins"), {
+      ...formData,
+      createdAt: serverTimestamp(),
+    });
+
+    alert("Survey submitted successfully!");
+    // Optionally clear form
+    setFormData({
+      sleepHours: "",
+      caffeineCups: "",
+      physicalActivity: "",
+      screenTime: "",
+      workStudyHours: "",
+      dayDescription: "",
+    });
+  } catch (error) {
+    console.error("Error submitting survey:", error);
+    alert("Failed to submit survey. Please try again.");
+  }
+};
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-indigo-100">
@@ -99,7 +129,7 @@ export default function SurveyPage() {
                 htmlFor="physicalActivity"
                 className="text-gray-700 text-base"
               >
-                Physical activity today (in minutes)
+                Physical activity today (in hours)
               </Label>
               <Input
                 id="physicalActivity"
