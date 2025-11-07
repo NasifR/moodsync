@@ -2,11 +2,13 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { signOut, onAuthStateChanged } from "firebase/auth";
-import { auth } from "../../../lib/firebaseConfig";
+import { doc, setDoc, collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { auth, db } from "../../../lib/firebaseConfig";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import RadioButton from "@/components/ui/RadioButton";
 import { Heart } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 
@@ -18,6 +20,7 @@ export default function SurveyPage() {
     physicalActivity: "",
     screenTime: "",
     workStudyHours: "",
+    smokingHabit: "No",
     dayDescription: "",
   });
 
@@ -39,10 +42,72 @@ export default function SurveyPage() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log("Survey submitted:", formData);
-  };
+  const handleChange = (field: string, value: string) => {
+  setFormData((prev) => ({
+    ...prev,
+    [field]: value,
+  }));
+};
+
+
+  // handle form submit by sending data to backend, then storing everything in Firestore
+  const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+
+  const user = auth.currentUser;
+  if (!user) {
+    alert("You must be logged in to submit.");
+    router.push("/SignUp");
+    return;
+  }
+
+  try {
+    // Convert "Yes"/"No" to 1/0 for backend compatibility
+    const formattedData = {
+      sleep_hours: parseFloat(formData.sleepHours) || 0,
+      caffeine_intake: parseFloat(formData.caffeineCups) || 0,
+      physical_activity_hours: parseFloat(formData.physicalActivity) || 0,
+      screen_time: parseFloat(formData.screenTime) || 0,
+      work_hours: parseFloat(formData.workStudyHours) || 0,
+      smoking: formData.smokingHabit === "Yes" ? 1 : 0,
+    };
+
+    // Send data to FastAPI backend for stress prediction
+    const response = await fetch("http://127.0.0.1:8000/predict", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(formattedData),
+    });
+
+    if (!response.ok) throw new Error("Backend request failed");
+
+    const result = await response.json();
+    const predictedStress = result.predicted_stress_level;
+
+    // Store everything in Firestore under the user's subcollection
+    await addDoc(collection(db, "users", user.uid, "checkins"), {
+      ...formData,
+      predictedStress,
+      createdAt: serverTimestamp(),
+    });
+
+    alert(`Survey submitted! Predicted stress level: ${predictedStress}`);
+
+    // Clear form
+    setFormData({
+      sleepHours: "",
+      caffeineCups: "",
+      physicalActivity: "",
+      screenTime: "",
+      workStudyHours: "",
+      dayDescription: "",
+      smokingHabit: "No",
+    });
+  } catch (error) {
+    console.error("Error submitting survey:", error);
+    alert("Failed to submit survey. Please try again.");
+  }
+};
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-indigo-100">
@@ -99,7 +164,7 @@ export default function SurveyPage() {
                 htmlFor="physicalActivity"
                 className="text-gray-700 text-base"
               >
-                Physical activity today (in minutes)
+                Physical activity today (in hours)
               </Label>
               <Input
                 id="physicalActivity"
@@ -150,6 +215,26 @@ export default function SurveyPage() {
                 className="py-5 text-gray-900 placeholder:text-gray-500 bg-white border border-purple-200 focus:border-purple-600 focus:ring-2 focus:ring-purple-300 focus:outline-none"
               />
             </div>
+
+            <div className="space-y-2">
+                <Label className="text-gray-700 text-base">Are you a smoker?</Label>
+                <div className="flex items-center space-x-6">
+                  <RadioButton
+                label="Yes"
+                name="smokingHabit"
+                value="Yes"
+                checked={formData.smokingHabit === "Yes"}
+                onChange={(value) => handleChange("smokingHabit", value)}
+              />
+              <RadioButton
+                label="No"
+                name="smokingHabit"
+                value="No"
+                checked={formData.smokingHabit === "No"}
+                onChange={(value) => handleChange("smokingHabit", value)}
+              />
+                </div>
+              </div>
 
             <div className="space-y-2 pt-4">
               <Label
