@@ -1,106 +1,308 @@
 "use client";
-import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 
-import { 
-  Heart, 
-  TrendingUp, 
-  Activity,
+import { doc, getDoc } from "firebase/firestore";
+import React, { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { onAuthStateChanged } from "firebase/auth";
+import {
+  collection,
+  query,
+  orderBy,
+  limit,
+  getDocs,
+  serverTimestamp,
+  addDoc,
+  Timestamp,
+} from "firebase/firestore";
+import { auth, db } from "../../../lib/firebaseConfig";
+
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+
+import {
+  Heart,
   LogOut,
-  Settings,
   Bell,
-  Users,
-  BarChart3,
-  Moon,
-  Sun,
-  Brain,
-  Home,
-  Calendar,
-  MessageSquare,
-  Award,
-  HelpCircle,
-  Smile,
-  Sparkles,
   Search,
-  Video,
-  Clock,
   ArrowRight,
-  Zap
-} from 'lucide-react';
-import { 
-  AreaChart,
-  Area,
-  LineChart, 
-  Line, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
+  Sparkles,
+  Smile,
+} from "lucide-react";
+
+import {
   ResponsiveContainer,
+  LineChart,
+  Line,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Tooltip,
   BarChart,
   Bar,
-  PieChart,
-  Pie,
-  Cell
-} from 'recharts';
+  Legend,
+} from "recharts";
+
+
+const CustomTooltip = ({ active, payload, label }) => {
+  if (active && payload && payload.length) {
+    const stressValue = payload[0].value;
+    const stressLabel =
+      stressValue <= 2 ? "Low" : stressValue <= 6 ? "Medium" : "High";
+
+    return (
+      <div className="bg-white border border-gray-300 p-2 rounded-lg shadow-md">
+        <p className="text-purple-600 font-semibold">{label}</p> {/* date */}
+        <p className="text-gray-800">
+          Stress: <span className="font-medium">{stressLabel}</span>
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
+
+
+type Checkin = {
+  sleepHours?: number | string;
+  caffeineCups?: number | string;
+  physicalActivity?: number | string; // minutes or hours depending on you
+  screenTime?: number | string;
+  workStudyHours?: number | string;
+  dayDescription?: string;
+  smoking?: number; // 0|1
+  predictedStress?: string | number;
+  createdAt?: Timestamp | { seconds: number } | string | number;
+  // any other fields
+  [key: string]: any;
+};
 
 interface DashboardPageProps {
-  user: { id: string; email: string; name: string } | null;
-  onLogout: () => void;
+  user?: { id: string; email?: string; name?: string } | null;
+  onLogout?: () => void;
 }
 
-// Mock data based on emotional wellness tracking
-const emotionalActivitiesData = [
-  { month: 'Jul', value: 65 },
-  { month: 'Aug', value: 72 },
-  { month: 'Sep', value: 85 },
-  { month: 'Oct', value: 78 },
-  { month: 'Nov', value: 88 },
-  { month: 'Dec', value: 92 }
-];
+function toDate(x: any): Date {
+  // Handle Firestore Timestamp, number/ms, or Date
+  if (!x) return new Date();
+  if (typeof x === "number") return new Date(x);
+  if (x instanceof Date) return x;
+  if (typeof x === "string") return new Date(x);
+  if (x.seconds !== undefined && typeof x.seconds === "number")
+    return new Date(x.seconds * 1000);
+  if (x.toDate) return x.toDate(); // firebase Timestamp
+  return new Date();
+}
 
-const weekData = [
-  { day: 'Sun', mood: 8, stress: 3, energy: 7 },
-  { day: 'Mon', mood: 7, stress: 5, energy: 6 },
-  { day: 'Tue', mood: 8, stress: 4, energy: 7 },
-  { day: 'Wed', mood: 6, stress: 6, energy: 5 },
-  { day: 'Thu', mood: 9, stress: 2, energy: 8 },
-  { day: 'Fri', mood: 8, stress: 3, energy: 8 },
-  { day: 'Sat', mood: 9, stress: 2, energy: 9 }
-];
+// Map stress label -> numeric value for chart (adjust values if you prefer)
+function mapStressToNumber(val: any): number {
+  if (val === null || val === undefined) return 0;
+  if (typeof val === "number") return val;
+  const s = String(val).toLowerCase();
+  if (s.includes("low")) return 2;
+  if (s.includes("medium")) return 5;
+  if (s.includes("high")) return 8;
+  // fallback: try parse number
+  const n = Number(val);
+  if (!Number.isNaN(n)) return n;
+  return 5; // neutral fallback
+}
 
-const upcomingActivities = [
-  {
-    title: 'Manage stress',
-    time: '12:00 pm - 12:30 pm',
-    icon: Brain,
-    color: 'from-purple-400 to-purple-600'
-  },
-  {
-    title: 'Physiotherapy',
-    time: '09:00 am - 10:00 am',
-    icon: Activity,
-    color: 'from-orange-400 to-orange-600'
+function formatShortDate(d: Date) {
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+export default function DashboardPage({ user: userProp, onLogout }: DashboardPageProps) {
+  const router = useRouter();
+  const [user, setUser] = useState<any | null>(userProp ?? null);
+  const [loadingAuth, setLoadingAuth] = useState(true);
+
+  // check auth and redirect if not logged in
+  useEffect(() => {
+  const unsubscribe = onAuthStateChanged(auth, async (u) => {
+    if (!u) {
+      setUser(null);
+      setLoadingAuth(false);
+      router.push("/SignUp");
+    } else {
+      try {
+        // Fetch user details from Firestore
+        const userDoc = await getDoc(doc(db, "users", u.uid));
+        const userData = userDoc.exists() ? userDoc.data() : {};
+
+        setUser({
+          id: u.uid,
+          email: u.email,
+          name: userData.fullName || u.displayName || u.email?.split("@")[0] || "User",
+        });
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+        setUser({
+          id: u.uid,
+          email: u.email,
+          name: u.displayName || u.email?.split("@")[0] || "User",
+        });
+      }
+      setLoadingAuth(false);
+    }
+  });
+
+  return () => unsubscribe();
+}, [router]);
+
+  // checkins state
+  const [checkins, setCheckins] = useState<Checkin[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [showMore, setShowMore] = useState(false);
+
+  // fetch last 30 checkins for current user
+  useEffect(() => {
+    if (!user) return;
+    let mounted = true;
+    const fetchData = async () => {
+      setLoading(true);
+      setFetchError(null);
+      try {
+        const colRef = collection(db, "users", user.id, "checkins");
+        const q = query(colRef, orderBy("createdAt", "desc"), limit(30));
+        const snap = await getDocs(q);
+        if (!mounted) return;
+        const docs: Checkin[] = snap.docs.map((d) => {
+          const data = d.data() as any;
+          return {
+            ...data,
+            id: d.id,
+            createdAt: data.createdAt ?? data.created_at ?? Date.now(),
+          } as Checkin;
+        });
+        setCheckins(docs);
+      } catch (e: any) {
+        console.error("Error fetching checkins:", e);
+        setFetchError(String(e?.message ?? e));
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+
+    fetchData();
+    return () => {
+      mounted = false;
+    };
+  }, [user]);
+
+  // derive last 7 days aggregated series (or available days)
+  const last7Series = useMemo(() => {
+    // Build map for last 7 calendar dates (including today)
+    const now = new Date();
+    // Gather dates from checkins
+    // We'll aggregate by date string "YYYY-MM-DD"
+    const group: Record<string, { date: Date; stressVals: number[]; physical: number[]; screen: number[]; raw: Checkin[] }> = {};
+
+    const pushEntry = (dStr: string, date: Date, entry: Checkin) => {
+      if (!group[dStr]) group[dStr] = { date, stressVals: [], physical: [], screen: [], raw: [] };
+      group[dStr].raw.push(entry);
+      group[dStr].stressVals.push(mapStressToNumber(entry.predictedStress));
+      if (entry.physicalActivity !== undefined) group[dStr].physical.push(Number(entry.physicalActivity) || 0);
+      if (entry.screenTime !== undefined) group[dStr].screen.push(Number(entry.screenTime) || 0);
+    };
+
+    checkins.forEach((c) => {
+      const d = toDate(c.createdAt);
+      const dStr = d.toISOString().slice(0, 10);
+      pushEntry(dStr, d, c);
+    });
+
+    // If there are not 7 calendar days, use available unique days sorted desc up to 7.
+    const uniqueDates = Object.keys(group)
+      .sort((a, b) => (a < b ? 1 : -1)) // desc
+      .slice(0, 7)
+      .map((k) => ({ key: k, ...group[k] }))
+      .reverse(); // reverse so earliest first
+
+    // If no checkins, return empty
+    if (uniqueDates.length === 0 && checkins.length > 0) {
+      // fallback: use raw checkins limited to 7 most recent, one per checkin
+      return checkins.slice(0, 7).reverse().map((c) => {
+        const d = toDate(c.createdAt);
+        return {
+          dateLabel: formatShortDate(d),
+          dateIso: d.toISOString().slice(0, 10),
+          stress: mapStressToNumber(c.predictedStress),
+          physical: Number(c.physicalActivity) || 0,
+          screen: Number(c.screenTime) || 0,
+        };
+      });
+    }
+
+    return uniqueDates.map((u) => {
+      const avgStress = u.stressVals.length ? Math.round(u.stressVals.reduce((a, b) => a + b, 0) / u.stressVals.length) : 0;
+      const sumPhysical = u.physical.reduce((a, b) => a + b, 0);
+      const sumScreen = u.screen.reduce((a, b) => a + b, 0);
+      return {
+        dateLabel: formatShortDate(u.date),
+        dateIso: u.date.toISOString().slice(0, 10),
+        stress: avgStress,
+        physical: Math.round(sumPhysical),
+        screen: Math.round(sumScreen),
+      };
+    });
+  }, [checkins]);
+
+  // list data to show (first 7 or 30)
+  const listToShow = useMemo(() => {
+    const limitCount = showMore ? 30 : 7;
+    return checkins.slice(0, limitCount);
+  }, [checkins, showMore]);
+
+  // helper to display predictedStress in readable form
+  const displayStressLabel = (val: any) => {
+    if (val === null || val === undefined) return "Unknown";
+    if (typeof val === "number") {
+      // map numeric back to label roughly
+      if (val <= 3) return "Low";
+      if (val <= 6) return "Medium";
+      return "High";
+    }
+    return String(val);
+  };
+
+  // small handlers
+  const handleLogout = async () => {
+    await auth.signOut();
+    router.push("/SignUp");
+  };
+
+  // layout placeholders when loading / empty
+  if (loadingAuth || loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-purple-50 to-indigo-50">
+        <div className="text-center">
+          <div className="animate-pulse mb-4">
+            <div className="w-36 h-36 rounded-full bg-purple-200 mx-auto"></div>
+          </div>
+          <p className="text-gray-600">Loading your dashboard…</p>
+        </div>
+      </div>
+    );
   }
-];
 
-export function DashboardPage({ user, onLogout }: DashboardPageProps) {
-  const [selectedDate, setSelectedDate] = useState(6);
-  const currentWellnessScore = 80;
-  
-  // Generate calendar days
-  const calendarDays = Array.from({ length: 31 }, (_, i) => i + 1);
-  const monthYear = 'October 2022';
+  if (!user) {
+    return null; // redirect already triggered by auth listener
+  }
 
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-indigo-50">
       {/* Sidebar */}
       <aside className="w-72 bg-gradient-to-b from-purple-700 to-purple-900 flex flex-col">
         <div className="p-6">
-          {/* Logo */}
           <div className="flex items-center space-x-3 mb-12">
             <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
               <Heart className="w-6 h-6 text-white" />
@@ -108,70 +310,47 @@ export function DashboardPage({ user, onLogout }: DashboardPageProps) {
             <span className="text-white text-xl">MoodSync</span>
           </div>
 
-          {/* Navigation */}
           <nav className="space-y-2 mb-8">
             <button className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl bg-white/20 text-white backdrop-blur-sm">
-              <Home className="w-5 h-5" />
               <span>Dashboard</span>
             </button>
             <button className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-purple-100 hover:bg-white/10 transition-colors">
-              <Activity className="w-5 h-5" />
-              <span>Activities</span>
+              <span>Survey</span>
             </button>
             <button className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-purple-100 hover:bg-white/10 transition-colors">
-              <BarChart3 className="w-5 h-5" />
               <span>Analytics</span>
             </button>
             <button className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-purple-100 hover:bg-white/10 transition-colors">
-              <Users className="w-5 h-5" />
-              <span>Community</span>
-            </button>
-            <button className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-purple-100 hover:bg-white/10 transition-colors">
-              <MessageSquare className="w-5 h-5" />
-              <span>Messages</span>
-            </button>
-            <button className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-purple-100 hover:bg-white/10 transition-colors">
-              <Settings className="w-5 h-5" />
               <span>Settings</span>
-            </button>
-            <button className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-purple-100 hover:bg-white/10 transition-colors">
-              <HelpCircle className="w-5 h-5" />
-              <span>Help</span>
             </button>
           </nav>
 
-          {/* User Card */}
           <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4">
             <div className="flex items-center space-x-3 mb-4">
               <Avatar className="w-12 h-12 border-2 border-white/30">
                 <AvatarFallback className="bg-gradient-to-br from-purple-400 to-blue-500 text-white">
-                  {user?.name.split(' ').map(n => n[0]).join('') || 'U'}
+                  {String(user.name || "U").split(" ").map((n: string) => n[0]).join("")}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1">
-                <p className="text-white font-medium">{user?.name || 'User'}</p>
+                <p className="text-white font-medium">{user.name}</p>
                 <p className="text-purple-200 text-sm">Premium Member</p>
               </div>
             </div>
-            <Button
-              onClick={onLogout}
-              variant="ghost"
-              className="w-full text-purple-100 hover:bg-white/10 justify-start"
-            >
+            <Button onClick={handleLogout} variant="ghost" className="w-full text-purple-100 hover:bg-white/10 justify-start">
               <LogOut className="w-4 h-4 mr-2" />
               Logout
             </Button>
           </div>
         </div>
 
-        {/* Illustration at bottom */}
         <div className="mt-auto p-6">
           <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 text-center">
             <div className="w-16 h-16 mx-auto mb-3 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center">
               <Sparkles className="w-8 h-8 text-white" />
             </div>
             <p className="text-white text-sm mb-2">Check your condition</p>
-            <p className="text-purple-200 text-xs mb-3">Check your stress situation and your activities</p>
+            <p className="text-purple-200 text-xs mb-3">Track stress, activity & screen time</p>
             <Button className="w-full bg-green-500 hover:bg-green-600 text-white">
               Check It Now
             </Button>
@@ -179,326 +358,241 @@ export function DashboardPage({ user, onLogout }: DashboardPageProps) {
         </div>
       </aside>
 
-      {/* Main Content */}
+      {/* Main */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Top Header */}
+        {/* Header */}
         <header className="bg-white/70 backdrop-blur-sm border-b border-purple-100 px-8 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl text-gray-900">
-                Hi, <span className="font-semibold">{user?.name || 'User'}!</span> 👋
-              </h1>
-              <p className="text-gray-600 text-sm mt-1">Let's track your health daily!</p>
+              <h1 className="text-2xl text-gray-900">Hi, <span className="font-semibold">{user.name}</span> 👋</h1>
+              <p className="text-gray-600 text-sm mt-1">Welcome back — here's how you've been feeling.</p>
             </div>
             <div className="flex items-center space-x-4">
               <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Search..."
-                  className="pl-10 pr-4 py-2 bg-white border border-purple-200 rounded-xl text-sm focus:outline-none focus:border-purple-400"
-                />
+                <input type="text" placeholder="Search..." className="pl-10 pr-4 py-2 bg-white border border-purple-200 rounded-xl text-sm focus:outline-none focus:border-purple-400" />
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               </div>
               <Button variant="ghost" size="sm" className="relative">
                 <Bell className="w-5 h-5 text-gray-600" />
                 <span className="absolute top-1 right-1 w-2 h-2 bg-green-500 rounded-full"></span>
               </Button>
-              <Avatar className="w-10 h-10 cursor-pointer border-2 border-purple-200">
-                <AvatarFallback className="bg-gradient-to-br from-purple-400 to-blue-500 text-white">
-                  {user?.name.split(' ').map(n => n[0]).join('') || 'U'}
-                </AvatarFallback>
-              </Avatar>
             </div>
           </div>
         </header>
 
-        {/* Content Area */}
+        {/* Content */}
         <div className="flex-1 p-8 overflow-auto">
-          <div className="max-w-[1400px] mx-auto">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Left Column - Main Content */}
-              <div className="lg:col-span-2 space-y-6">
-                {/* Upcoming Appointment */}
+          <div className="max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Left: Charts */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Stress last 7 days */}
+              <Card className="border-purple-100 shadow-lg">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-gray-700 font-bold">Last week's stress level</CardTitle>
+                      <CardDescription className="text-gray-500 mt-1">Trend based on your recent check-ins</CardDescription>
+                    </div>
+                    <div className="text-sm text-gray-600">{last7Series.length ? `${last7Series.length} days` : "No data"}</div>
+                  </div>
+                </CardHeader>
+
+                <CardContent>
+                  {last7Series.length ? (
+                    <ResponsiveContainer width="100%" height={280}>
+                      <LineChart data={last7Series} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#F3E8FF" />
+                        <XAxis dataKey="dateLabel" tick={{ fill: "#6B7280", fontSize: 12 }} />
+                        <YAxis domain={[0, 10]} tick={{ fill: "#6B7280", fontSize: 12 }} />
+                        <Tooltip content={<CustomTooltip />} />
+                        <Line type="monotone" dataKey="stress" stroke="#7C3AED" strokeWidth={3} dot={{ r: 4 }} animationDuration={800} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="py-8 text-center text-gray-500">No stress data yet. Submit your first check-in to see it here.</div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Multi metrics row */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Physical activity */}
                 <Card className="border-purple-100 shadow-lg">
                   <CardHeader>
-                    <CardTitle>Upcoming appointment</CardTitle>
+                    <CardTitle className="text-gray-700 font-bold">Physical activity (recent)</CardTitle>
+                    <CardDescription className="text-gray-500 mt-1">Minutes/hours recorded per day</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex items-center space-x-6">
-                      {/* Illustration placeholder */}
-                      <div className="w-32 h-32 bg-gradient-to-br from-blue-200 to-purple-300 rounded-2xl flex items-center justify-center">
-                        <div className="relative">
-                          <div className="w-20 h-24 bg-gradient-to-br from-orange-400 to-orange-600 rounded-lg"></div>
-                          <div className="absolute -top-2 -left-2 w-6 h-6 bg-blue-500 rounded"></div>
-                          <div className="absolute -top-2 -right-2 w-6 h-6 bg-blue-400 rounded"></div>
-                          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-3 h-3 bg-white rounded-full"></div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-3 mb-3">
-                          <Avatar className="w-12 h-12">
-                            <AvatarFallback className="bg-gradient-to-br from-purple-400 to-pink-400 text-white">
-                              EW
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium text-gray-900">Dr. Emilia Winson</p>
-                            <p className="text-sm text-gray-600">Psychotherapy</p>
-                          </div>
-                          <Badge className="bg-green-100 text-green-700 hover:bg-green-100 ml-auto">
-                            <Video className="w-3 h-3 mr-1" />
-                            Video call
-                          </Badge>
-                        </div>
-                        <div className="flex items-center space-x-4 text-sm text-gray-600">
-                          <div className="flex items-center space-x-2">
-                            <Calendar className="w-4 h-4" />
-                            <span>14 Mar 2022</span>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <Clock className="w-4 h-4" />
-                            <span>09:00 pm</span>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="text-sm text-gray-500">
-                        <p>Monggo ST Hospital</p>
-                        <p>New York, USA</p>
-                      </div>
-                    </div>
+                    {last7Series.length ? (
+                      <ResponsiveContainer width="100%" height={180}>
+                        <BarChart data={last7Series}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#F3E8FF" vertical={false} />
+                          <XAxis dataKey="dateLabel" tick={{ fill: "#6B7280", fontSize: 12 }} />
+                          <YAxis tick={{ fill: "#6B7280", fontSize: 12 }} />
+                          <Tooltip />
+                          <Bar dataKey="physical" fill="#60A5FA" radius={[6,6,0,0]} animationDuration={800} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="py-8 text-center text-gray-500">No physical activity data yet.</div>
+                    )}
                   </CardContent>
                 </Card>
 
-                {/* Patient Activities */}
+                {/* Screen time */}
                 <Card className="border-purple-100 shadow-lg">
                   <CardHeader>
+                    <CardTitle className="text-gray-700 font-bold">Screen time (recent)</CardTitle>
+                    <CardDescription className="text-gray-500 mt-1">Hours spent on screens</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {last7Series.length ? (
+                      <ResponsiveContainer width="100%" height={180}>
+                        <BarChart data={last7Series}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#F3E8FF" vertical={false} />
+                          <XAxis dataKey="dateLabel" tick={{ fill: "#6B7280", fontSize: 12 }} />
+                          <YAxis tick={{ fill: "#6B7280", fontSize: 12 }} />
+                          <Tooltip />
+                          <Bar dataKey="screen" fill="#C084FC" radius={[6,6,0,0]} animationDuration={800} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="py-8 text-center text-gray-500">No screen time data yet.</div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Recent list / activity */}
+              <Card className="border-purple-100 shadow-lg">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-gray-700 font-bold">Recent check-ins</CardTitle>
+                      <CardDescription className="text-gray-500 mt-1">See your latest mood & stress entries</CardDescription>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <Badge className="bg-purple-50 text-purple-700">{checkins.length} total</Badge>
+                      <Button onClick={() => setShowMore((s) => !s)} className="bg-white border border-purple-200">
+                        {showMore ? "Show less" : "Show more"}
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+
+                <CardContent>
+                  {checkins.length === 0 ? (
+                    <div className="py-8 text-center text-gray-500">No check-ins yet. Start by submitting your daily check-in.</div>
+                  ) : (
+                    <div className="space-y-3">
+                      {listToShow.map((c: Checkin, idx: number) => {
+                        const date = toDate(c.createdAt);
+                        return (
+                          <div key={c.id ?? idx} className="p-3 bg-white rounded-xl flex items-center justify-between shadow-sm hover:shadow-md transition-shadow">
+                            <div>
+                              <div className="flex items-center space-x-3">
+                                <Avatar className="w-10 h-10">
+                                  <AvatarFallback className="bg-gradient-to-br from-purple-400 to-pink-400 text-white">U</AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <p className="font-medium text-gray-900">{formatShortDate(date)}</p>
+                                  <p className="text-sm text-gray-500">{c.dayDescription ? c.dayDescription.slice(0, 80) + (c.dayDescription.length > 80 ? "…" : "") : "No description"}</p>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="text-right">
+                              <div className="text-sm text-gray-500 mb-1">Stress</div>
+                              <div className="font-semibold text-gray-900">{displayStressLabel(c.predictedStress)}</div>
+                              <div className="text-xs text-gray-400 mt-1">{toDate(c.createdAt).toLocaleString()}</div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Right column: summary + insights */}
+            <div className="space-y-6">
+              <Card className="border-purple-100 shadow-lg text-gray-700">
+                <CardHeader>
+                  <CardTitle className="text-gray-700 font-bold">Overview</CardTitle>
+                  <CardDescription className="text-gray-500 mt-1">Quick insights</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <CardTitle>Emotional wellness activities</CardTitle>
-                        <CardDescription>Today, 5 October 2022</CardDescription>
+                        <p className="text-sm text-gray-500">Average stress (recent)</p>
+                        <p className="text-2xl font-semibold text-gray-900">
+                          {last7Series.length ? Math.round((last7Series.reduce((a,b)=>a+b.stress,0))/last7Series.length) : "—"}
+                          <span className="text-xs text-gray-500"> /10</span>
+                        </p>
                       </div>
-                      <select className="px-3 py-2 bg-white border border-purple-200 rounded-lg text-sm focus:outline-none focus:border-purple-400">
-                        <option>Month</option>
-                        <option>Week</option>
-                        <option>Year</option>
-                      </select>
+                      <div className="text-right">
+                        <p className="text-sm text-gray-500">Check-ins</p>
+                        <p className="font-semibold text-gray-900">{checkins.length}</p>
+                      </div>
                     </div>
-                  </CardHeader>
-                  <CardContent>
-                    <ResponsiveContainer width="100%" height={280}>
-                      <BarChart data={emotionalActivitiesData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#E9D5FF" vertical={false} />
-                        <XAxis 
-                          dataKey="month" 
-                          tick={{ fontSize: 12, fill: '#9CA3AF' }}
-                          axisLine={false}
-                          tickLine={false}
-                        />
-                        <YAxis hide />
-                        <Tooltip 
-                          contentStyle={{ 
-                            backgroundColor: 'white', 
-                            border: '1px solid #E9D5FF',
-                            borderRadius: '8px' 
-                          }}
-                        />
-                        <Bar 
-                          dataKey="value" 
-                          fill="#86EFAC" 
-                          radius={[8, 8, 8, 8]}
-                          maxBarSize={60}
-                        />
-                      </BarChart>
-                    </ResponsiveContainer>
-                    
-                    <div className="mt-4 p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl">
-                      <div className="flex items-center space-x-2 text-sm">
-                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                          <Smile className="w-4 h-4 text-blue-600" />
+
+                    <div className="p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                          <Smile className="w-5 h-5 text-blue-600" />
                         </div>
                         <div>
-                          <p className="font-medium text-gray-900">Good conditions</p>
-                          <p className="text-gray-600">Anxiety is wellness</p>
-                        </div>
-                        <ArrowRight className="w-4 h-4 text-gray-400 ml-auto" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Weekly Overview */}
-                <Card className="border-purple-100 shadow-lg">
-                  <CardHeader>
-                    <CardTitle>Weekly mood patterns</CardTitle>
-                    <CardDescription>Your emotional journey this week</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <ResponsiveContainer width="100%" height={240}>
-                      <AreaChart data={weekData}>
-                        <defs>
-                          <linearGradient id="colorMood" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#A78BFA" stopOpacity={0.8}/>
-                            <stop offset="95%" stopColor="#A78BFA" stopOpacity={0.1}/>
-                          </linearGradient>
-                          <linearGradient id="colorEnergy" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#60A5FA" stopOpacity={0.8}/>
-                            <stop offset="95%" stopColor="#60A5FA" stopOpacity={0.1}/>
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#E9D5FF" />
-                        <XAxis dataKey="day" tick={{ fontSize: 12, fill: '#9CA3AF' }} />
-                        <YAxis domain={[0, 10]} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
-                        <Tooltip />
-                        <Area 
-                          type="monotone" 
-                          dataKey="mood" 
-                          stroke="#A78BFA" 
-                          strokeWidth={2}
-                          fill="url(#colorMood)" 
-                        />
-                        <Area 
-                          type="monotone" 
-                          dataKey="energy" 
-                          stroke="#60A5FA" 
-                          strokeWidth={2}
-                          fill="url(#colorEnergy)" 
-                        />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Right Column */}
-              <div className="space-y-6">
-                {/* List of Appointments */}
-                <Card className="border-purple-100 shadow-lg">
-                  <CardHeader>
-                    <CardTitle>List of appointments</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {/* Tabs */}
-                    <div className="flex space-x-2 mb-4">
-                      <button className="px-4 py-2 bg-white border border-purple-200 rounded-lg text-sm hover:border-purple-400">
-                        <Calendar className="w-4 h-4 inline mr-1" />
-                        Monthly
-                      </button>
-                      <button className="px-4 py-2 bg-white border border-purple-200 rounded-lg text-sm">
-                        Daily
-                      </button>
-                    </div>
-
-                    {/* Calendar */}
-                    <div className="mb-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="font-medium text-gray-900">{monthYear}</span>
-                        <div className="flex space-x-2">
-                          <button className="w-6 h-6 flex items-center justify-center hover:bg-gray-100 rounded">‹</button>
-                          <button className="w-6 h-6 flex items-center justify-center hover:bg-gray-100 rounded">›</button>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-7 gap-1 mb-2">
-                        {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => (
-                          <div key={i} className="text-center text-xs text-gray-500 py-1">
-                            {day}
-                          </div>
-                        ))}
-                      </div>
-                      <div className="grid grid-cols-7 gap-1">
-                        {calendarDays.map((day) => (
-                          <button
-                            key={day}
-                            onClick={() => setSelectedDate(day)}
-                            className={`text-center text-sm py-2 rounded-lg transition-colors ${
-                              day === selectedDate
-                                ? 'bg-gradient-to-br from-orange-400 to-orange-500 text-white'
-                                : day === 1 || day === 2 || day === 4 || day === 7 || day === 8 || day === 9 || 
-                                  day === 10 || day === 11 || day === 12 || day === 13 || day === 14 || 
-                                  day === 15 || day === 16 || day === 17 || day === 18 || day === 19 ||
-                                  day === 20 || day === 21 || day === 22 || day === 24 || day === 25 ||
-                                  day === 26 || day === 27 || day === 28 || day === 29 || day === 30 || day === 31
-                                ? 'text-gray-400'
-                                : 'text-gray-900 hover:bg-purple-50'
-                            }`}
-                          >
-                            {day}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Daily Progress */}
-                    <div className="bg-gradient-to-br from-green-50 to-teal-50 rounded-2xl p-4 mb-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <div>
-                          <p className="font-medium text-gray-900 mb-1">Daily progress</p>
-                          <p className="text-sm text-gray-600">Keep improving the quality of your health</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-center">
-                        <div className="relative w-32 h-32">
-                          <svg className="w-32 h-32 transform -rotate-90">
-                            <circle
-                              cx="64"
-                              cy="64"
-                              r="56"
-                              stroke="#E5E7EB"
-                              strokeWidth="8"
-                              fill="none"
-                            />
-                            <circle
-                              cx="64"
-                              cy="64"
-                              r="56"
-                              stroke="#86EFAC"
-                              strokeWidth="8"
-                              fill="none"
-                              strokeDasharray={`${2 * Math.PI * 56}`}
-                              strokeDashoffset={`${2 * Math.PI * 56 * (1 - currentWellnessScore / 100)}`}
-                              strokeLinecap="round"
-                            />
-                          </svg>
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <span className="text-3xl font-semibold text-gray-900">{currentWellnessScore}%</span>
-                          </div>
+                          <p className="font-medium text-gray-900">Wellbeing is improving</p>
+                          <p className="text-sm text-gray-500">Stay consistent with check-ins to track progress.</p>
                         </div>
                       </div>
                     </div>
 
-                    {/* Schedule Items */}
-                    <div className="space-y-3">
-                      {upcomingActivities.map((activity, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center space-x-3 p-3 bg-gradient-to-r from-purple-50 to-white rounded-xl hover:shadow-md transition-shadow cursor-pointer border border-purple-100"
-                        >
-                          <div className={`w-12 h-12 bg-gradient-to-br ${activity.color} rounded-full flex items-center justify-center flex-shrink-0`}>
-                            <activity.icon className="w-6 h-6 text-white" />
-                          </div>
-                          <div className="flex-1">
-                            <p className="font-medium text-gray-900 text-sm">{activity.title}</p>
-                            <p className="text-xs text-gray-600">{activity.time}</p>
-                          </div>
-                          <ArrowRight className="w-4 h-4 text-gray-400" />
-                        </div>
-                      ))}
-                      
-                      <button className="w-full text-sm text-purple-600 hover:text-purple-700 flex items-center justify-center space-x-2 py-2">
-                        <span>See More Schedule</span>
-                        <ArrowRight className="w-4 h-4" />
-                      </button>
+                    <div>
+                      <Button onClick={() => router.push("/SurveyPage")} className="w-full bg-purple-600 hover:bg-purple-700 text-white">
+                        Add today's check-in
+                      </Button>
                     </div>
-                  </CardContent>
-                </Card>
-              </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-purple-100 shadow-lg">
+                <CardHeader>
+                  <CardTitle className="text-gray-700 font-bold">Tips</CardTitle>
+                  <CardDescription className="text-gray-500 mt-1">Quick actions to reduce stress</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-3">
+                    <li className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600">1</div>
+                      <div>
+                        <p className="font-bold text-gray-700">Short breathing exercise</p>
+                        <p className="text-sm text-gray-500">Try 4-4-4 breathing for 60 seconds.</p>
+                      </div>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600">2</div>
+                      <div>
+                        <p className="font-bold text-gray-700">Step away from screens</p>
+                        <p className="text-sm text-gray-500">Take a 10-minute walk to reset focus.</p>
+                      </div>
+                    </li>
+                  </ul>
+                </CardContent>
+              </Card>
             </div>
           </div>
+
+          {fetchError && (
+            <div className="mt-6 text-center text-red-600">
+              Error loading your data: {fetchError}
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
-
-export default DashboardPage;
