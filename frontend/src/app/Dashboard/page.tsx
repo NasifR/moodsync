@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { doc, getDoc } from "firebase/firestore";
 import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -55,7 +56,7 @@ const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     const stressValue = payload[0].value;
     const stressLabel =
-      stressValue <= 2 ? "Low" : stressValue <= 6 ? "Medium" : "High";
+      stressValue <= 4 ? "Low" : stressValue <= 7 ? "Medium" : "High";
 
     return (
       <div className="bg-white border border-gray-300 p-2 rounded-lg shadow-md">
@@ -106,9 +107,9 @@ function mapStressToNumber(val: any): number {
   if (val === null || val === undefined) return 0;
   if (typeof val === "number") return val;
   const s = String(val).toLowerCase();
-  if (s.includes("low")) return 2;
-  if (s.includes("medium")) return 5;
-  if (s.includes("high")) return 8;
+  if (s.includes("low")) return 3;
+  if (s.includes("medium")) return 6;
+  if (s.includes("high")) return 9;
   // fallback: try parse number
   const n = Number(val);
   if (!Number.isNaN(n)) return n;
@@ -267,8 +268,8 @@ export default function DashboardPage({ user: userProp, onLogout }: DashboardPag
     if (val === null || val === undefined) return "Unknown";
     if (typeof val === "number") {
       // map numeric back to label roughly
-      if (val <= 3) return "Low";
-      if (val <= 6) return "Medium";
+      if (val <= 4) return "Low";
+      if (val <= 7) return "Medium";
       return "High";
     }
     return String(val);
@@ -314,15 +315,19 @@ export default function DashboardPage({ user: userProp, onLogout }: DashboardPag
             <button className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl bg-white/20 text-white backdrop-blur-sm">
               <span>Dashboard</span>
             </button>
-            <button className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-purple-100 hover:bg-white/10 transition-colors">
+            <Link href="/SurveyPage">
+              <button className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-purple-100 hover:bg-white/10 transition-colors">
               <span>Survey</span>
-            </button>
+          </button>
+          </Link>
             <button className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-purple-100 hover:bg-white/10 transition-colors">
               <span>Analytics</span>
             </button>
+            <Link href="/">
             <button className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-purple-100 hover:bg-white/10 transition-colors">
-              <span>Settings</span>
+              <span>Home</span>
             </button>
+            </Link>
           </nav>
 
           <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4">
@@ -473,7 +478,7 @@ export default function DashboardPage({ user: userProp, onLogout }: DashboardPag
                     </div>
                     <div className="flex items-center space-x-3">
                       <Badge className="bg-purple-50 text-purple-700">{checkins.length} total</Badge>
-                      <Button onClick={() => setShowMore((s) => !s)} className="bg-white border border-purple-200">
+                      <Button onClick={() => setShowMore((s) => !s)} className="bg-purple-600 border text-white border-purple-200 hover:bg-black hover:text-white hover:shadow-2xl hover:shadow-purple-600bg-purple-600 hover:cursor-pointer hover:shadow-purple-600 transition-all">
                         {showMore ? "Show less" : "Show more"}
                       </Button>
                     </div>
@@ -551,7 +556,7 @@ export default function DashboardPage({ user: userProp, onLogout }: DashboardPag
                     </div>
 
                     <div>
-                      <Button onClick={() => router.push("/SurveyPage")} className="w-full bg-purple-600 hover:bg-purple-700 text-white">
+                      <Button onClick={() => router.push("/SurveyPage")} className="w-full bg-purple-600 border text-white border-purple-200 hover:bg-black hover:text-white hover:shadow-2xl hover:shadow-purple-600bg-purple-600 hover:cursor-pointer hover:shadow-purple-600 transition-all">
                         Add today's check-in
                       </Button>
                     </div>
