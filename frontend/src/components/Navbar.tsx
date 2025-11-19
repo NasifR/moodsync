@@ -46,11 +46,16 @@ export function Navbar() {
             <Link
               key={item.href}
               href={item.href}
-              className={`transition-colors ${
-                pathname === item.href
-                  ? "text-purple-600 font-medium border-b-2 border-purple-600 pb-1"
-                  : "text-gray-600 hover:text-purple-600"
-              }`}
+              className={`
+                relative px-2 py-1 transition-all
+                ${
+                  pathname === item.href
+                    ? "text-purple-600 font-medium border-b-2 border-purple-600"
+                    : "text-gray-600 hover:text-purple-600"
+                }
+                hover:shadow-lg hover:shadow-purple-600 hover:bg-black hover:text-white hover:border-purple-400
+                rounded-md transition-all
+              `}
             >
               {item.label}
             </Link>
@@ -67,7 +72,7 @@ export function Navbar() {
           </Button>
         ) : (
           <Link href="/SignUp">
-            <Button className="bg-purple-600 hover:bg-purple-700">
+            <Button className="bg-purple-600 hover:bg-black hover:cursor-pointer hover:text-white hover:shadow-xl hover:shadow-purple-600 transition-all">
               Get Started
             </Button>
           </Link>
