@@ -2,12 +2,14 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
+import EmailVerificationModal from "@/components/EmailVerificationModal";
 import { auth, db } from "../../../lib/firebaseConfig";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   sendEmailVerification,
   onAuthStateChanged,
+  reload,
 } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
@@ -26,13 +28,37 @@ import { Heart, ArrowLeft } from "lucide-react";
 export default function Signup() {
   const router = useRouter();
 
+  // Email verification modal
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
+
+  const handleProceedVerification = async () => {
+    if (!auth.currentUser) return;
+
+    await reload(auth.currentUser); // refresh user info
+
+    if (auth.currentUser.emailVerified) {
+      toast.success("Email verified!");
+      router.push("/SurveyPage");
+    } else {
+      toast.error("Please verify your email first. Check your spam folder!");
+    }
+  };
+ // End of email verification modal
+
+
   // Redirect if user already logged in
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) router.push("/SurveyPage");
-    });
-    return () => unsubscribe();
-  }, [router]);
+  const unsubscribe = onAuthStateChanged(auth, (user) => {
+    if (!user) return;
+
+    // If user is verified → allow redirect
+    if (user.emailVerified) {
+      router.push("/SurveyPage");
+    }
+  });
+
+  return () => unsubscribe();
+}, [router]);
 
   type FormData = {
     email: string;
@@ -86,7 +112,9 @@ export default function Signup() {
         "A verification link was sent to your email. Please check your inbox."
       );
 
-      router.push("/SurveyPage");
+      toast.success("Account created successfully!");
+      // Show verification modal
+      setShowVerificationModal(true);
     } catch (error: any) {
       console.error("Signup failed:", error);
 
@@ -310,6 +338,10 @@ export default function Signup() {
           </p>
         </div>
       </div>
+      <EmailVerificationModal
+      open={showVerificationModal}
+      onProceed={handleProceedVerification}
+    />
     </div>
   );
 }
