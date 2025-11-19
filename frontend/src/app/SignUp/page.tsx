@@ -181,7 +181,7 @@ export default function Signup() {
                   </div>
                   <Button
                     type="submit"
-                    className="w-full bg-purple-600 hover:bg-purple-700"
+                    className="w-full bg-purple-600 hover:bg-black hover:cursor-pointer hover:text-white hover:shadow-lg hover:shadow-purple-600 transition-all"
                   >
                     {isLoading ? "Signing in..." : "Sign In"}
                   </Button>
@@ -243,7 +243,7 @@ export default function Signup() {
                   </div>
                   <Button
                     type="submit"
-                    className="w-full bg-purple-600 hover:bg-purple-700"
+                    className="w-full bg-purple-600 hover:bg-black hover:cursor-pointer hover:text-white hover:shadow-lg hover:shadow-purple-600 transition-all"
                   >
                     {isLoading ? "Creating account..." : "Create Account"}
                   </Button>

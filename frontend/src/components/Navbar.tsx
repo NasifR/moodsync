@@ -72,7 +72,7 @@ export function Navbar() {
           </Button>
         ) : (
           <Link href="/SignUp">
-            <Button className="bg-purple-600 hover:bg-black hover:cursor-pointer hover:text-white hover:shadow-xl hover:shadow-purple-600 transition-all">
+            <Button className="bg-purple-600 hover:bg-black hover:cursor-pointer hover:text-white hover:shadow-lg hover:shadow-purple-600 transition-all">
               Get Started
             </Button>
           </Link>
