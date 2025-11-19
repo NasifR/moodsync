@@ -119,7 +119,7 @@ export default function Signup() {
           </Button>
           <div className="flex items-center space-x-2">
             <Heart className="w-8 h-8 text-purple-600" />
-            <span className="text-2xl font-bold text-gray-900">MoodSync</span>
+            <span className="text-2xl font-bold text-gray-900">MindSight</span>
           </div>
         </div>
 
@@ -262,10 +262,10 @@ export default function Signup() {
           <p className="text-sm text-gray-600">
             Need help? Contact us at{" "}
             <a
-              href="mailto:support@moodsync.com"
+              href="mailto:support@MindSight.com"
               className="text-purple-600 hover:text-purple-700"
             >
-              support@moodsync.com
+              support@MindSight.com
             </a>
           </p>
         </div>

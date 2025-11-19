@@ -308,7 +308,7 @@ export default function DashboardPage({ user: userProp, onLogout }: DashboardPag
             <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
               <Heart className="w-6 h-6 text-white" />
             </div>
-            <span className="text-white text-xl">MoodSync</span>
+            <span className="text-white text-xl">MindSight</span>
           </div>
 
           <nav className="space-y-2 mb-8">

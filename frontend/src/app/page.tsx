@@ -3,7 +3,7 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Heart, Brain, BarChart3, Users } from 'lucide-react';
+import { Heart, Brain, BarChart3, Users, BrainCircuit } from 'lucide-react';
 import { ImageWithFallback } from '@/components/ui/ImageWithFallback';
 import { Navbar } from '@/components/Navbar';
 
@@ -114,8 +114,8 @@ export default function LandingPage() {
 
                 <div className="flex items-center space-x-8 text-sm text-gray-500">
                   <div className="flex items-center space-x-2">
-                    <Users className="w-4 h-4" />
-                    <span>10,000+ users</span>
+                    <BrainCircuit className="w-4 h-4" />
+                    <span>ML-powered</span>
                   </div>
                   <div className="flex items-center space-x-2">
                     <Heart className="w-4 h-4" />
@@ -193,7 +193,7 @@ export default function LandingPage() {
           <div className="max-w-7xl mx-auto">
             <div className="text-center mb-12">
               <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-                How MoodSync Helps You
+                How MindSight Helps You
               </h2>
               <p className="text-lg text-gray-600 max-w-2xl mx-auto">
                 Our comprehensive approach combines mood tracking, personalized insights,
@@ -244,7 +244,7 @@ export default function LandingPage() {
               </h2>
               <p className="text-lg mb-8 opacity-90">
                 Join thousands of users who have discovered greater emotional awareness
-                and wellbeing through MoodSync.
+                and wellbeing through MindSight.
               </p>
               <Button
                 onClick={handleGetStarted}
@@ -261,7 +261,7 @@ export default function LandingPage() {
           <div className="max-w-7xl mx-auto text-center">
             <div className="flex items-center justify-center space-x-2 mb-4">
               <Heart className="w-6 h-6 text-purple-400" />
-              <span className="text-lg">MoodSync</span>
+              <span className="text-lg">MindSight</span>
             </div>
             <p className="text-gray-400">
               Supporting your emotional wellbeing, one day at a time.

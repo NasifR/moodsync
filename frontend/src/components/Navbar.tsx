@@ -37,7 +37,7 @@ export function Navbar() {
         {/* Logo */}
         <Link href="/" className="flex items-center space-x-2">
           <Heart className="w-8 h-8 text-purple-600" />
-          <span className="text-xl font-semibold text-gray-900">MoodSync</span>
+          <span className="text-xl font-semibold text-gray-900">MindSight</span>
         </Link>
 
         {/* Navigation */}
