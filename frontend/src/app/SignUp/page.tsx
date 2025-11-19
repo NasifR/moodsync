@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 import { auth, db } from "../../../lib/firebaseConfig";
 import {
   createUserWithEmailAndPassword,
@@ -57,7 +58,10 @@ export default function Signup() {
     const { email, password, fullName } = formData;
 
     if (!email || !password || !fullName) {
-      alert("Please fill in all fields.");
+      toast.error("Please fill in all fields.", {
+      duration: 3000,
+      icon: "⚠️",
+    });
       return;
     }
 
@@ -85,7 +89,29 @@ export default function Signup() {
       router.push("/SurveyPage");
     } catch (error: any) {
       console.error("Signup failed:", error);
-      alert("Signup failed. Error: " + error.message);
+
+      switch (error.code) {
+      case "auth/email-already-in-use":
+        toast.error("This email is already registered.");
+        break;
+
+      case "auth/invalid-email":
+        toast.error("Please enter a valid email address.");
+        break;
+
+      case "auth/weak-password":
+        toast.error("Password is too weak. Use at least 6 characters.");
+        break;
+
+      case "auth/operation-not-allowed":
+        toast.error("Email/password accounts are not enabled in Firebase.");
+        break;
+
+      default:
+        toast.error("Sign up failed. Please try again.");
+        break;
+    }
+
     } finally {
       setIsLoading(false);
     }
@@ -96,10 +122,24 @@ export default function Signup() {
     setIsLoading(true);
     try {
       await signInWithEmailAndPassword(auth, formData.email, formData.password);
+      toast.success("Welcome back! 🎉");
       router.push("/SurveyPage");
     } catch (error: any) {
       console.log(error);
-      alert("Login failed. Error: " + error.message);
+      
+      if (error.code === "auth/invalid-credential" || error.code === "auth/wrong-password") {
+      toast.error("Invalid credentials. Please try again.");
+    } 
+    else if (error.code === "auth/user-not-found") {
+      toast.error("No account found with this email.");
+    }
+    else if (error.code === "auth/too-many-requests") {
+      toast.error("Too many attempts. Please wait and try again.");
+    }
+    else {
+      toast.error("Login failed. Please try again.");
+    }
+
     } finally {
       setIsLoading(false);
     }
