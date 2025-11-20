@@ -13,7 +13,7 @@ export function Navbar() {
   const [user, setUser] = useState<any>(null);
 
   const navItems = [
-    { label: "Features", href: "/#features" },
+    { label: "Features", href: "#features" },
     { label: "Survey", href: "/SurveyPage" },
     { label: "Dashboard", href: "/Dashboard" },
   ];
@@ -47,14 +47,14 @@ export function Navbar() {
               key={item.href}
               href={item.href}
               className={`
-                relative px-2 py-1 transition-all
+                relative px-3 py-2 transition-all
                 ${
                   pathname === item.href
-                    ? "text-purple-600 font-medium border-b-2 border-purple-600"
-                    : "text-gray-600 hover:text-purple-600"
+                    ? "text-purple-600 font-medium"
+                    : "text-gray-600 hover:text-white"
                 }
-                hover:shadow-lg hover:shadow-purple-600 hover:bg-black hover:text-white hover:border-purple-400
-                rounded-md transition-all
+                hover:bg-purple-600 hover:text-white
+                rounded-md transition-all duration-200
               `}
             >
               {item.label}
@@ -66,13 +66,13 @@ export function Navbar() {
         {user ? (
           <Button
             onClick={handleLogout}
-            className="bg-black hover:bg-red-600 text-white"
+            className="bg-purple-600 hover:bg-red-600 text-white transition-all duration-200"
           >
             Log Out
           </Button>
         ) : (
           <Link href="/SignUp">
-            <Button className="bg-purple-600 hover:bg-black hover:cursor-pointer hover:text-white hover:shadow-lg hover:shadow-purple-600 transition-all">
+            <Button className="bg-purple-600 hover:bg-purple-700 hover:cursor-pointer text-white hover:shadow-lg transition-all duration-200">
               Get Started
             </Button>
           </Link>
