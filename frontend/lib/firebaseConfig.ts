@@ -11,7 +11,6 @@ const firebaseConfig = {
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
-console.log("Firebase config:", firebaseConfig);
 
 // Prevent re-initializing Firebase in Next.js (hot reload)
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
