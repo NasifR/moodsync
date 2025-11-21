@@ -41,8 +41,8 @@ try:
     print("Loading emotion model...")
 
     # Load from local folder (must contain model files)
-    emotion_tokenizer = AutoTokenizer.from_pretrained("./nlp_model")
-    emotion_model = AutoModelForSequenceClassification.from_pretrained("./nlp_model")
+    emotion_tokenizer = AutoTokenizer.from_pretrained("boltuix/bert-emotion")
+    emotion_model = AutoModelForSequenceClassification.from_pretrained("boltuix/bert-emotion")
 
     emotion_pipeline = pipeline("text-classification", model=emotion_model, tokenizer=emotion_tokenizer)
 
