@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import ChatWidget from "@/components/ChatWidget";
 
 import {
   Heart,
@@ -51,7 +52,6 @@ import {
   Legend,
 } from "recharts";
 
-
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     const stressValue = payload[0].value;
@@ -69,7 +69,6 @@ const CustomTooltip = ({ active, payload, label }) => {
   }
   return null;
 };
-
 
 type Checkin = {
   sleepHours?: number | string;
@@ -120,43 +119,50 @@ function formatShortDate(d: Date) {
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
-export default function DashboardPage({ user: userProp, onLogout }: DashboardPageProps) {
+export default function DashboardPage({
+  user: userProp,
+  onLogout,
+}: DashboardPageProps) {
   const router = useRouter();
   const [user, setUser] = useState<any | null>(userProp ?? null);
   const [loadingAuth, setLoadingAuth] = useState(true);
 
   // check auth and redirect if not logged in
   useEffect(() => {
-  const unsubscribe = onAuthStateChanged(auth, async (u) => {
-    if (!u) {
-      setUser(null);
-      setLoadingAuth(false);
-      router.push("/SignUp");
-    } else {
-      try {
-        // Fetch user details from Firestore
-        const userDoc = await getDoc(doc(db, "users", u.uid));
-        const userData = userDoc.exists() ? userDoc.data() : {};
+    const unsubscribe = onAuthStateChanged(auth, async (u) => {
+      if (!u) {
+        setUser(null);
+        setLoadingAuth(false);
+        router.push("/SignUp");
+      } else {
+        try {
+          // Fetch user details from Firestore
+          const userDoc = await getDoc(doc(db, "users", u.uid));
+          const userData = userDoc.exists() ? userDoc.data() : {};
 
-        setUser({
-          id: u.uid,
-          email: u.email,
-          name: userData.fullName || u.displayName || u.email?.split("@")[0] || "User",
-        });
-      } catch (error) {
-        console.error("Error fetching user data:", error);
-        setUser({
-          id: u.uid,
-          email: u.email,
-          name: u.displayName || u.email?.split("@")[0] || "User",
-        });
+          setUser({
+            id: u.uid,
+            email: u.email,
+            name:
+              userData.fullName ||
+              u.displayName ||
+              u.email?.split("@")[0] ||
+              "User",
+          });
+        } catch (error) {
+          console.error("Error fetching user data:", error);
+          setUser({
+            id: u.uid,
+            email: u.email,
+            name: u.displayName || u.email?.split("@")[0] || "User",
+          });
+        }
+        setLoadingAuth(false);
       }
-      setLoadingAuth(false);
-    }
-  });
+    });
 
-  return () => unsubscribe();
-}, [router]);
+    return () => unsubscribe();
+  }, [router]);
 
   // checkins state
   const [checkins, setCheckins] = useState<Checkin[]>([]);
@@ -205,14 +211,32 @@ export default function DashboardPage({ user: userProp, onLogout }: DashboardPag
     const now = new Date();
     // Gather dates from checkins
     // We'll aggregate by date string "YYYY-MM-DD"
-    const group: Record<string, { date: Date; stressVals: number[]; physical: number[]; screen: number[]; raw: Checkin[] }> = {};
+    const group: Record<
+      string,
+      {
+        date: Date;
+        stressVals: number[];
+        physical: number[];
+        screen: number[];
+        raw: Checkin[];
+      }
+    > = {};
 
     const pushEntry = (dStr: string, date: Date, entry: Checkin) => {
-      if (!group[dStr]) group[dStr] = { date, stressVals: [], physical: [], screen: [], raw: [] };
+      if (!group[dStr])
+        group[dStr] = {
+          date,
+          stressVals: [],
+          physical: [],
+          screen: [],
+          raw: [],
+        };
       group[dStr].raw.push(entry);
       group[dStr].stressVals.push(mapStressToNumber(entry.predictedStress));
-      if (entry.physicalActivity !== undefined) group[dStr].physical.push(Number(entry.physicalActivity) || 0);
-      if (entry.screenTime !== undefined) group[dStr].screen.push(Number(entry.screenTime) || 0);
+      if (entry.physicalActivity !== undefined)
+        group[dStr].physical.push(Number(entry.physicalActivity) || 0);
+      if (entry.screenTime !== undefined)
+        group[dStr].screen.push(Number(entry.screenTime) || 0);
     };
 
     checkins.forEach((c) => {
@@ -231,20 +255,27 @@ export default function DashboardPage({ user: userProp, onLogout }: DashboardPag
     // If no checkins, return empty
     if (uniqueDates.length === 0 && checkins.length > 0) {
       // fallback: use raw checkins limited to 7 most recent, one per checkin
-      return checkins.slice(0, 7).reverse().map((c) => {
-        const d = toDate(c.createdAt);
-        return {
-          dateLabel: formatShortDate(d),
-          dateIso: d.toISOString().slice(0, 10),
-          stress: mapStressToNumber(c.predictedStress),
-          physical: Number(c.physicalActivity) || 0,
-          screen: Number(c.screenTime) || 0,
-        };
-      });
+      return checkins
+        .slice(0, 7)
+        .reverse()
+        .map((c) => {
+          const d = toDate(c.createdAt);
+          return {
+            dateLabel: formatShortDate(d),
+            dateIso: d.toISOString().slice(0, 10),
+            stress: mapStressToNumber(c.predictedStress),
+            physical: Number(c.physicalActivity) || 0,
+            screen: Number(c.screenTime) || 0,
+          };
+        });
     }
 
     return uniqueDates.map((u) => {
-      const avgStress = u.stressVals.length ? Math.round(u.stressVals.reduce((a, b) => a + b, 0) / u.stressVals.length) : 0;
+      const avgStress = u.stressVals.length
+        ? Math.round(
+            u.stressVals.reduce((a, b) => a + b, 0) / u.stressVals.length
+          )
+        : 0;
       const sumPhysical = u.physical.reduce((a, b) => a + b, 0);
       const sumScreen = u.screen.reduce((a, b) => a + b, 0);
       return {
@@ -317,16 +348,16 @@ export default function DashboardPage({ user: userProp, onLogout }: DashboardPag
             </button>
             <Link href="/SurveyPage">
               <button className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-purple-100 hover:bg-white/10 transition-colors">
-              <span>Survey</span>
-          </button>
-          </Link>
+                <span>Survey</span>
+              </button>
+            </Link>
             <button className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-purple-100 hover:bg-white/10 transition-colors">
               <span>Analytics</span>
             </button>
             <Link href="/">
-            <button className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-purple-100 hover:bg-white/10 transition-colors">
-              <span>Home</span>
-            </button>
+              <button className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-purple-100 hover:bg-white/10 transition-colors">
+                <span>Home</span>
+              </button>
             </Link>
           </nav>
 
@@ -334,7 +365,10 @@ export default function DashboardPage({ user: userProp, onLogout }: DashboardPag
             <div className="flex items-center space-x-3 mb-4">
               <Avatar className="w-12 h-12 border-2 border-white/30">
                 <AvatarFallback className="bg-gradient-to-br from-purple-400 to-blue-500 text-white">
-                  {String(user.name || "U").split(" ").map((n: string) => n[0]).join("")}
+                  {String(user.name || "U")
+                    .split(" ")
+                    .map((n: string) => n[0])
+                    .join("")}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1">
@@ -342,7 +376,11 @@ export default function DashboardPage({ user: userProp, onLogout }: DashboardPag
                 <p className="text-purple-200 text-sm">Premium Member</p>
               </div>
             </div>
-            <Button onClick={handleLogout} variant="ghost" className="w-full text-purple-100 hover:bg-white/10 justify-start">
+            <Button
+              onClick={handleLogout}
+              variant="ghost"
+              className="w-full text-purple-100 hover:bg-white/10 justify-start"
+            >
               <LogOut className="w-4 h-4 mr-2" />
               Logout
             </Button>
@@ -355,7 +393,9 @@ export default function DashboardPage({ user: userProp, onLogout }: DashboardPag
               <Sparkles className="w-8 h-8 text-white" />
             </div>
             <p className="text-white text-sm mb-2">Check your condition</p>
-            <p className="text-purple-200 text-xs mb-3">Track stress, activity & screen time</p>
+            <p className="text-purple-200 text-xs mb-3">
+              Track stress, activity & screen time
+            </p>
             <Button className="w-full bg-green-500 hover:bg-green-600 text-white">
               Check It Now
             </Button>
@@ -369,12 +409,20 @@ export default function DashboardPage({ user: userProp, onLogout }: DashboardPag
         <header className="bg-white/70 backdrop-blur-sm border-b border-purple-100 px-8 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl text-gray-900">Hi, <span className="font-semibold">{user.name}</span> 👋</h1>
-              <p className="text-gray-600 text-sm mt-1">Welcome back — here's how you've been feeling.</p>
+              <h1 className="text-2xl text-gray-900">
+                Hi, <span className="font-semibold">{user.name}</span> 👋
+              </h1>
+              <p className="text-gray-600 text-sm mt-1">
+                Welcome back — here's how you've been feeling.
+              </p>
             </div>
             <div className="flex items-center space-x-4">
               <div className="relative">
-                <input type="text" placeholder="Search..." className="pl-10 pr-4 py-2 bg-white border border-purple-200 rounded-xl text-sm focus:outline-none focus:border-purple-400" />
+                <input
+                  type="text"
+                  placeholder="Search..."
+                  className="pl-10 pr-4 py-2 bg-white border border-purple-200 rounded-xl text-sm focus:outline-none focus:border-purple-400"
+                />
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               </div>
               <Button variant="ghost" size="sm" className="relative">
@@ -395,26 +443,53 @@ export default function DashboardPage({ user: userProp, onLogout }: DashboardPag
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>
-                      <CardTitle className="text-gray-700 font-bold">Last week's stress level</CardTitle>
-                      <CardDescription className="text-gray-500 mt-1">Trend based on your recent check-ins</CardDescription>
+                      <CardTitle className="text-gray-700 font-bold">
+                        Last week's stress level
+                      </CardTitle>
+                      <CardDescription className="text-gray-500 mt-1">
+                        Trend based on your recent check-ins
+                      </CardDescription>
                     </div>
-                    <div className="text-sm text-gray-600">{last7Series.length ? `${last7Series.length} days` : "No data"}</div>
+                    <div className="text-sm text-gray-600">
+                      {last7Series.length
+                        ? `${last7Series.length} days`
+                        : "No data"}
+                    </div>
                   </div>
                 </CardHeader>
 
                 <CardContent>
                   {last7Series.length ? (
                     <ResponsiveContainer width="100%" height={280}>
-                      <LineChart data={last7Series} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                      <LineChart
+                        data={last7Series}
+                        margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
+                      >
                         <CartesianGrid strokeDasharray="3 3" stroke="#F3E8FF" />
-                        <XAxis dataKey="dateLabel" tick={{ fill: "#6B7280", fontSize: 12 }} />
-                        <YAxis domain={[0, 10]} tick={{ fill: "#6B7280", fontSize: 12 }} />
+                        <XAxis
+                          dataKey="dateLabel"
+                          tick={{ fill: "#6B7280", fontSize: 12 }}
+                        />
+                        <YAxis
+                          domain={[0, 10]}
+                          tick={{ fill: "#6B7280", fontSize: 12 }}
+                        />
                         <Tooltip content={<CustomTooltip />} />
-                        <Line type="monotone" dataKey="stress" stroke="#7C3AED" strokeWidth={3} dot={{ r: 4 }} animationDuration={800} />
+                        <Line
+                          type="monotone"
+                          dataKey="stress"
+                          stroke="#7C3AED"
+                          strokeWidth={3}
+                          dot={{ r: 4 }}
+                          animationDuration={800}
+                        />
                       </LineChart>
                     </ResponsiveContainer>
                   ) : (
-                    <div className="py-8 text-center text-gray-500">No stress data yet. Submit your first check-in to see it here.</div>
+                    <div className="py-8 text-center text-gray-500">
+                      No stress data yet. Submit your first check-in to see it
+                      here.
+                    </div>
                   )}
                 </CardContent>
               </Card>
@@ -424,22 +499,40 @@ export default function DashboardPage({ user: userProp, onLogout }: DashboardPag
                 {/* Physical activity */}
                 <Card className="border-purple-100 shadow-lg">
                   <CardHeader>
-                    <CardTitle className="text-gray-700 font-bold">Physical activity (recent)</CardTitle>
-                    <CardDescription className="text-gray-500 mt-1">Minutes/hours recorded per day</CardDescription>
+                    <CardTitle className="text-gray-700 font-bold">
+                      Physical activity (recent)
+                    </CardTitle>
+                    <CardDescription className="text-gray-500 mt-1">
+                      Minutes/hours recorded per day
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
                     {last7Series.length ? (
                       <ResponsiveContainer width="100%" height={180}>
                         <BarChart data={last7Series}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#F3E8FF" vertical={false} />
-                          <XAxis dataKey="dateLabel" tick={{ fill: "#6B7280", fontSize: 12 }} />
+                          <CartesianGrid
+                            strokeDasharray="3 3"
+                            stroke="#F3E8FF"
+                            vertical={false}
+                          />
+                          <XAxis
+                            dataKey="dateLabel"
+                            tick={{ fill: "#6B7280", fontSize: 12 }}
+                          />
                           <YAxis tick={{ fill: "#6B7280", fontSize: 12 }} />
                           <Tooltip />
-                          <Bar dataKey="physical" fill="#60A5FA" radius={[6,6,0,0]} animationDuration={800} />
+                          <Bar
+                            dataKey="physical"
+                            fill="#60A5FA"
+                            radius={[6, 6, 0, 0]}
+                            animationDuration={800}
+                          />
                         </BarChart>
                       </ResponsiveContainer>
                     ) : (
-                      <div className="py-8 text-center text-gray-500">No physical activity data yet.</div>
+                      <div className="py-8 text-center text-gray-500">
+                        No physical activity data yet.
+                      </div>
                     )}
                   </CardContent>
                 </Card>
@@ -447,22 +540,40 @@ export default function DashboardPage({ user: userProp, onLogout }: DashboardPag
                 {/* Screen time */}
                 <Card className="border-purple-100 shadow-lg">
                   <CardHeader>
-                    <CardTitle className="text-gray-700 font-bold">Screen time (recent)</CardTitle>
-                    <CardDescription className="text-gray-500 mt-1">Hours spent on screens</CardDescription>
+                    <CardTitle className="text-gray-700 font-bold">
+                      Screen time (recent)
+                    </CardTitle>
+                    <CardDescription className="text-gray-500 mt-1">
+                      Hours spent on screens
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
                     {last7Series.length ? (
                       <ResponsiveContainer width="100%" height={180}>
                         <BarChart data={last7Series}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#F3E8FF" vertical={false} />
-                          <XAxis dataKey="dateLabel" tick={{ fill: "#6B7280", fontSize: 12 }} />
+                          <CartesianGrid
+                            strokeDasharray="3 3"
+                            stroke="#F3E8FF"
+                            vertical={false}
+                          />
+                          <XAxis
+                            dataKey="dateLabel"
+                            tick={{ fill: "#6B7280", fontSize: 12 }}
+                          />
                           <YAxis tick={{ fill: "#6B7280", fontSize: 12 }} />
                           <Tooltip />
-                          <Bar dataKey="screen" fill="#C084FC" radius={[6,6,0,0]} animationDuration={800} />
+                          <Bar
+                            dataKey="screen"
+                            fill="#C084FC"
+                            radius={[6, 6, 0, 0]}
+                            animationDuration={800}
+                          />
                         </BarChart>
                       </ResponsiveContainer>
                     ) : (
-                      <div className="py-8 text-center text-gray-500">No screen time data yet.</div>
+                      <div className="py-8 text-center text-gray-500">
+                        No screen time data yet.
+                      </div>
                     )}
                   </CardContent>
                 </Card>
@@ -473,12 +584,21 @@ export default function DashboardPage({ user: userProp, onLogout }: DashboardPag
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>
-                      <CardTitle className="text-gray-700 font-bold">Recent check-ins</CardTitle>
-                      <CardDescription className="text-gray-500 mt-1">See your latest mood & stress entries</CardDescription>
+                      <CardTitle className="text-gray-700 font-bold">
+                        Recent check-ins
+                      </CardTitle>
+                      <CardDescription className="text-gray-500 mt-1">
+                        See your latest mood & stress entries
+                      </CardDescription>
                     </div>
                     <div className="flex items-center space-x-3">
-                      <Badge className="bg-purple-50 text-purple-700">{checkins.length} total</Badge>
-                      <Button onClick={() => setShowMore((s) => !s)} className="bg-purple-600 border text-white border-purple-200 hover:bg-black hover:text-white hover:shadow-2xl hover:shadow-purple-600bg-purple-600 hover:cursor-pointer hover:shadow-purple-600 transition-all">
+                      <Badge className="bg-purple-50 text-purple-700">
+                        {checkins.length} total
+                      </Badge>
+                      <Button
+                        onClick={() => setShowMore((s) => !s)}
+                        className="bg-purple-600 border text-white border-purple-200 hover:bg-black hover:text-white hover:shadow-2xl hover:shadow-purple-600bg-purple-600 hover:cursor-pointer hover:shadow-purple-600 transition-all"
+                      >
                         {showMore ? "Show less" : "Show more"}
                       </Button>
                     </div>
@@ -487,29 +607,51 @@ export default function DashboardPage({ user: userProp, onLogout }: DashboardPag
 
                 <CardContent>
                   {checkins.length === 0 ? (
-                    <div className="py-8 text-center text-gray-500">No check-ins yet. Start by submitting your daily check-in.</div>
+                    <div className="py-8 text-center text-gray-500">
+                      No check-ins yet. Start by submitting your daily check-in.
+                    </div>
                   ) : (
                     <div className="space-y-3">
                       {listToShow.map((c: Checkin, idx: number) => {
                         const date = toDate(c.createdAt);
                         return (
-                          <div key={c.id ?? idx} className="p-3 bg-white rounded-xl flex items-center justify-between shadow-sm hover:shadow-md transition-shadow">
+                          <div
+                            key={c.id ?? idx}
+                            className="p-3 bg-white rounded-xl flex items-center justify-between shadow-sm hover:shadow-md transition-shadow"
+                          >
                             <div>
                               <div className="flex items-center space-x-3">
                                 <Avatar className="w-10 h-10">
-                                  <AvatarFallback className="bg-gradient-to-br from-purple-400 to-pink-400 text-white">U</AvatarFallback>
+                                  <AvatarFallback className="bg-gradient-to-br from-purple-400 to-pink-400 text-white">
+                                    U
+                                  </AvatarFallback>
                                 </Avatar>
                                 <div>
-                                  <p className="font-medium text-gray-900">{formatShortDate(date)}</p>
-                                  <p className="text-sm text-gray-500">{c.dayDescription ? c.dayDescription.slice(0, 80) + (c.dayDescription.length > 80 ? "…" : "") : "No description"}</p>
+                                  <p className="font-medium text-gray-900">
+                                    {formatShortDate(date)}
+                                  </p>
+                                  <p className="text-sm text-gray-500">
+                                    {c.dayDescription
+                                      ? c.dayDescription.slice(0, 80) +
+                                        (c.dayDescription.length > 80
+                                          ? "…"
+                                          : "")
+                                      : "No description"}
+                                  </p>
                                 </div>
                               </div>
                             </div>
 
                             <div className="text-right">
-                              <div className="text-sm text-gray-500 mb-1">Stress</div>
-                              <div className="font-semibold text-gray-900">{displayStressLabel(c.predictedStress)}</div>
-                              <div className="text-xs text-gray-400 mt-1">{toDate(c.createdAt).toLocaleString()}</div>
+                              <div className="text-sm text-gray-500 mb-1">
+                                Stress
+                              </div>
+                              <div className="font-semibold text-gray-900">
+                                {displayStressLabel(c.predictedStress)}
+                              </div>
+                              <div className="text-xs text-gray-400 mt-1">
+                                {toDate(c.createdAt).toLocaleString()}
+                              </div>
                             </div>
                           </div>
                         );
@@ -524,22 +666,35 @@ export default function DashboardPage({ user: userProp, onLogout }: DashboardPag
             <div className="space-y-6">
               <Card className="border-purple-100 shadow-lg text-gray-700">
                 <CardHeader>
-                  <CardTitle className="text-gray-700 font-bold">Overview</CardTitle>
-                  <CardDescription className="text-gray-500 mt-1">Quick insights</CardDescription>
+                  <CardTitle className="text-gray-700 font-bold">
+                    Overview
+                  </CardTitle>
+                  <CardDescription className="text-gray-500 mt-1">
+                    Quick insights
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-gray-500">Average stress (recent)</p>
+                        <p className="text-sm text-gray-500">
+                          Average stress (recent)
+                        </p>
                         <p className="text-2xl font-semibold text-gray-900">
-                          {last7Series.length ? Math.round((last7Series.reduce((a,b)=>a+b.stress,0))/last7Series.length) : "—"}
+                          {last7Series.length
+                            ? Math.round(
+                                last7Series.reduce((a, b) => a + b.stress, 0) /
+                                  last7Series.length
+                              )
+                            : "—"}
                           <span className="text-xs text-gray-500"> /10</span>
                         </p>
                       </div>
                       <div className="text-right">
                         <p className="text-sm text-gray-500">Check-ins</p>
-                        <p className="font-semibold text-gray-900">{checkins.length}</p>
+                        <p className="font-semibold text-gray-900">
+                          {checkins.length}
+                        </p>
                       </div>
                     </div>
 
@@ -549,14 +704,21 @@ export default function DashboardPage({ user: userProp, onLogout }: DashboardPag
                           <Smile className="w-5 h-5 text-blue-600" />
                         </div>
                         <div>
-                          <p className="font-medium text-gray-900">Wellbeing is improving</p>
-                          <p className="text-sm text-gray-500">Stay consistent with check-ins to track progress.</p>
+                          <p className="font-medium text-gray-900">
+                            Wellbeing is improving
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            Stay consistent with check-ins to track progress.
+                          </p>
                         </div>
                       </div>
                     </div>
 
                     <div>
-                      <Button onClick={() => router.push("/SurveyPage")} className="w-full bg-purple-600 border text-white border-purple-200 hover:bg-black hover:text-white hover:shadow-2xl hover:shadow-purple-600bg-purple-600 hover:cursor-pointer hover:shadow-purple-600 transition-all">
+                      <Button
+                        onClick={() => router.push("/SurveyPage")}
+                        className="w-full bg-purple-600 border text-white border-purple-200 hover:bg-black hover:text-white hover:shadow-2xl hover:shadow-purple-600bg-purple-600 hover:cursor-pointer hover:shadow-purple-600 transition-all"
+                      >
                         Add today's check-in
                       </Button>
                     </div>
@@ -566,23 +728,39 @@ export default function DashboardPage({ user: userProp, onLogout }: DashboardPag
 
               <Card className="border-purple-100 shadow-lg">
                 <CardHeader>
-                  <CardTitle className="text-gray-700 font-bold">Tips</CardTitle>
-                  <CardDescription className="text-gray-500 mt-1">Quick actions to reduce stress</CardDescription>
+                  <CardTitle className="text-gray-700 font-bold">
+                    Tips
+                  </CardTitle>
+                  <CardDescription className="text-gray-500 mt-1">
+                    Quick actions to reduce stress
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <ul className="space-y-3">
                     <li className="flex items-start gap-3">
-                      <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600">1</div>
+                      <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600">
+                        1
+                      </div>
                       <div>
-                        <p className="font-bold text-gray-700">Short breathing exercise</p>
-                        <p className="text-sm text-gray-500">Try 4-4-4 breathing for 60 seconds.</p>
+                        <p className="font-bold text-gray-700">
+                          Short breathing exercise
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Try 4-4-4 breathing for 60 seconds.
+                        </p>
                       </div>
                     </li>
                     <li className="flex items-start gap-3">
-                      <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600">2</div>
+                      <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600">
+                        2
+                      </div>
                       <div>
-                        <p className="font-bold text-gray-700">Step away from screens</p>
-                        <p className="text-sm text-gray-500">Take a 10-minute walk to reset focus.</p>
+                        <p className="font-bold text-gray-700">
+                          Step away from screens
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Take a 10-minute walk to reset focus.
+                        </p>
                       </div>
                     </li>
                   </ul>
@@ -598,6 +776,7 @@ export default function DashboardPage({ user: userProp, onLogout }: DashboardPag
           )}
         </div>
       </div>
+      <ChatWidget />
     </div>
   );
 }
