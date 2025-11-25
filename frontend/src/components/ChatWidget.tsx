@@ -244,7 +244,7 @@ export default function ChatWidget() {
                       : "bg-white text-gray-900 border border-gray-200"
                   }`}
                 >
-                  <p className="text-sm">{message.text}</p>
+                  <p className="text-sm whitespace-pre-line">{message.text}</p>
                   <p
                     className={`text-xs mt-1 ${
                       message.sender === "user"
