@@ -53,8 +53,8 @@ export function Navbar() {
                     ? "text-purple-600 font-medium"
                     : "text-gray-600 hover:text-white"
                 }
-                hover:bg-purple-600 hover:text-white
-                rounded-md transition-all duration-200
+                hover:bg-black hover:text-white hover:shadow-lg hover:shadow-purple-600
+                rounded-lg transition-all
               `}
             >
               {item.label}
@@ -72,7 +72,7 @@ export function Navbar() {
           </Button>
         ) : (
           <Link href="/SignUp">
-            <Button className="bg-purple-600 hover:bg-purple-700 hover:cursor-pointer text-white hover:shadow-lg transition-all duration-200">
+            <Button className="bg-purple-600 hover:bg-black hover:cursor-pointer text-white hover:shadow-lg hover:shadow-purple-600 transition-all">
               Get Started
             </Button>
           </Link>
