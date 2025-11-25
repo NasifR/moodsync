@@ -84,8 +84,10 @@ export default function SurveyPage() {
         smoking: formData.smokingHabit === "Yes" ? 1 : 0,
       };
 
+      const API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
+
       // 1️⃣ CALL STRESS BACKEND
-      const stressResp = await fetch("http://127.0.0.1:8000/predict-stress", {
+      const stressResp = await fetch(`${API_URL}/predict-stress`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formattedData),
@@ -97,7 +99,7 @@ export default function SurveyPage() {
       const detectedStress = stressData.predicted_stress_level;
 
       // 2️⃣ CALL EMOTION BACKEND
-      const emotionResp = await fetch("http://127.0.0.1:8000/analyze-emotion", {
+      const emotionResp = await fetch(`${API_URL}/analyze-emotion`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: formData.dayDescription }),
@@ -140,7 +142,6 @@ export default function SurveyPage() {
       alert("Failed to submit survey. Please try again.");
     }
   };
-
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-indigo-100">
@@ -259,24 +260,26 @@ export default function SurveyPage() {
             </div>
 
             <div className="space-y-2">
-                <Label className="text-gray-700 text-base">Are you a smoker?</Label>
-                <div className="flex items-center space-x-6">
-                  <RadioButton
-                label="Yes"
-                name="smokingHabit"
-                value="Yes"
-                checked={formData.smokingHabit === "Yes"}
-                onChange={(value) => handleChange("smokingHabit", value)}
-              />
-              <RadioButton
-                label="No"
-                name="smokingHabit"
-                value="No"
-                checked={formData.smokingHabit === "No"}
-                onChange={(value) => handleChange("smokingHabit", value)}
-              />
-                </div>
+              <Label className="text-gray-700 text-base">
+                Are you a smoker?
+              </Label>
+              <div className="flex items-center space-x-6">
+                <RadioButton
+                  label="Yes"
+                  name="smokingHabit"
+                  value="Yes"
+                  checked={formData.smokingHabit === "Yes"}
+                  onChange={(value) => handleChange("smokingHabit", value)}
+                />
+                <RadioButton
+                  label="No"
+                  name="smokingHabit"
+                  value="No"
+                  checked={formData.smokingHabit === "No"}
+                  onChange={(value) => handleChange("smokingHabit", value)}
+                />
               </div>
+            </div>
 
             <div className="space-y-2 pt-4">
               <Label
