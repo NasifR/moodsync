@@ -176,7 +176,17 @@ export default function LandingPage() {
                 >
                   <Button
                     onClick={handleGetStarted}
-                    className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white text-lg px-8 py-6 rounded-xl shadow-lg hover:shadow-2xl hover:scale-105 transition-all duration-300"
+                    className="
+  bg-gradient-to-r from-purple-600 to-blue-600
+  text-white text-lg px-8 py-6 rounded-xl shadow-md
+  transition-all
+
+  hover:from-black hover:to-black
+  hover:text-white
+  hover:shadow-xl hover:shadow-purple-600
+"
+
+
                   >
                     Start Your Journey
                     <Sparkles className="w-5 h-5 ml-2" />
@@ -189,7 +199,7 @@ export default function LandingPage() {
                         block: "start",
                       });
                     }}
-                    className="text-lg px-8 py-6 rounded-xl bg-white border-2 border-gray-200 text-gray-700 hover:border-purple-600 hover:bg-purple-600 hover:text-white transition-all duration-300"
+                    className="text-lg px-8 py-6 rounded-xl bg-white border-2 border-gray-200 text-gray-700 hover:bg-black hover:border-black hover:shadow-xl hover:shadow-purple-600 hover:text-white transition-all"
                   >
                     Learn More
                   </Button>
@@ -573,7 +583,7 @@ export default function LandingPage() {
                 >
                   <Button
                     onClick={handleGetStarted}
-                    className="bg-white text-purple-600 hover:bg-gray-100 text-lg px-10 py-6 rounded-xl shadow-lg hover:shadow-2xl hover:scale-105 transition-all duration-300 font-bold"
+                    className="bg-white text-purple-600 hover:bg-black text-lg px-10 py-6 rounded-xl shadow-lg hover:shadow-xl hover:shadow-purple-900 hover:scale-105 transition-all hover:text-white font-bold"
                   >
                     Get Started for Free
                     <Sparkles className="w-5 h-5 ml-2" />
