@@ -50,7 +50,16 @@ import {
   BarChart,
   Bar,
   Legend,
-} from "recharts";
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts"
+
+import EmotionWheel from "@/components/EmotionWheel";
+import EmotionTimeline from "@/components/EmotionTimeline";
+import DominantEmotionCard from "@/components/DominantEmotionCard";
+import TodayEmotionCard from "@/components/TodayEmotionCard";
+
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
@@ -205,6 +214,28 @@ export default function DashboardPage({
     };
   }, [user]);
 
+  // today's emotion
+function isToday(date: Date) {
+  const today = new Date();
+  return (
+    date.getDate() === today.getDate() &&
+    date.getMonth() === today.getMonth() &&
+    date.getFullYear() === today.getFullYear()
+  );
+}
+
+let todayEmotion: string | null = null;
+
+if (checkins.length > 0) {
+  const latest = checkins[0];
+  const d = toDate(latest.createdAt);
+
+  if (isToday(d)) {
+    todayEmotion = latest.detectedEmotion ?? null;
+  }
+}
+
+
   // derive last 7 days aggregated series (or available days)
   const last7Series = useMemo(() => {
     // Build map for last 7 calendar dates (including today)
@@ -305,6 +336,64 @@ export default function DashboardPage({
     }
     return String(val);
   };
+
+  // --- NEW: derive emotions summary/timeline/dominant
+  const emotionCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    checkins.forEach((c) => {
+      const e = (c.detectedEmotion ?? c.detected_emotion ?? c.predictedEmotion ?? "").toString().trim();
+      if (!e) return;
+      counts[e] = (counts[e] || 0) + 1;
+    });
+    return counts;
+  }, [checkins]);
+
+  const totalEmotionEntries = useMemo(() => {
+    return Object.values(emotionCounts).reduce((a, b) => a + b, 0);
+  }, [emotionCounts]);
+
+  const dominantEmotion = useMemo(() => {
+    let best: { label: string; count: number } | null = null;
+    Object.entries(emotionCounts).forEach(([label, count]) => {
+      if (!best || count > best.count) best = { label, count };
+    });
+    return best;
+  }, [emotionCounts]);
+
+  // timeline: use the most recent up to 12 checkins, oldest first
+  const emotionTimeline = useMemo(() => {
+    const items = checkins
+      .slice(0, 12)
+      .map((c) => {
+        const d = toDate(c.createdAt);
+        return {
+          dateLabel: formatShortDate(d),
+          emotion: c.detectedEmotion ?? c.detected_emotion ?? c.predictedEmotion ?? "Unknown",
+          emoji: (() => {
+            const map: Record<string, string> = {
+              Sadness: "😢",
+              Anger: "😠",
+              Love: "❤️",
+              Surprise: "😲",
+              Fear: "😱",
+              Happiness: "😄",
+              Neutral: "😐",
+              Disgust: "🤢",
+              Shame: "🙈",
+              Guilt: "😔",
+              Confusion: "😕",
+              Desire: "🔥",
+              Sarcasm: "😏",
+            };
+            return map[(c.detectedEmotion ?? c.detected_emotion ?? c.predictedEmotion ?? "").toString()] ?? "❓";
+          })(),
+          ts: toDate(c.createdAt).getTime(),
+        };
+      })
+      .sort((a, b) => a.ts - b.ts) // oldest first
+      .map(({ts, ...rest}) => rest);
+    return items;
+  }, [checkins]);
 
   // small handlers
   const handleLogout = async () => {
@@ -579,6 +668,23 @@ export default function DashboardPage({
                 </Card>
               </div>
 
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <DominantEmotionCard
+                  dominant={dominantEmotion}
+                  total={totalEmotionEntries}
+                  className="h-full"
+                />
+
+                <TodayEmotionCard emotion={todayEmotion} className="h-full" />
+
+            </div>
+
+            {/* --- Full-width Emotion Timeline (wider + nicer) --- */}
+            <div className="mt-8">
+              <EmotionTimeline timeline={emotionTimeline} />
+            </div>
+            {/*end of Emotion Timeline*/}
+
               {/* Recent list / activity */}
               <Card className="border-purple-100 shadow-lg">
                 <CardHeader>
@@ -766,6 +872,14 @@ export default function DashboardPage({
                   </ul>
                 </CardContent>
               </Card>
+
+              <div className="w-full">
+                <EmotionWheel
+                  counts={emotionCounts}
+                  total={totalEmotionEntries || 0}
+                  className="h-full"
+                />
+              </div>
             </div>
           </div>
 
