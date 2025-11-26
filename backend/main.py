@@ -220,9 +220,6 @@ def format_user_context(user_context: dict) -> str:
 
     context_parts = ["\n\n=== USER DATA CONTEXT START ===\n"]
 
-    if "user_email" in user_context:
-        context_parts.append(f"User Email: {user_context['user_email']}")
-
     if "total_checkins" in user_context:
         context_parts.append(f"Total Check-ins Provided: {user_context['total_checkins']}")
 
