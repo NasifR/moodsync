@@ -100,17 +100,16 @@ export default function ChatWidget() {
         const createdAt = data.createdAt || data.created_at;
         let dateStr = "Unknown date";
 
-        if (createdAt) {
+        if (createdAt && createdAt.toDate) {
           try {
-            if (createdAt.toDate) {
-              dateStr = createdAt.toDate().toISOString();
-            } else if (typeof createdAt === "number") {
-              dateStr = new Date(createdAt).toISOString();
-            } else if (createdAt.seconds) {
-              dateStr = new Date(createdAt.seconds * 1000).toISOString();
-            }
+            const date = createdAt.toDate();
+            dateStr = date.toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            });
           } catch (e) {
-            console.error("Error converting date:", e);
+            console.error("Error converting timestamp:", e);
           }
         }
 
