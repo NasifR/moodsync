@@ -5,7 +5,8 @@ import { Heart, User, ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { onAuthStateChanged, signOut } from "firebase/auth";
-import { auth } from "../../lib/firebaseConfig";
+import { auth, db } from "../../lib/firebaseConfig";
+import { doc, getDoc } from "firebase/firestore";
 
 export function Navbar() {
   const pathname = usePathname();
@@ -14,8 +15,35 @@ export function Navbar() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (currentUser) {
+        try {
+          const userDoc = await getDoc(doc(db, "users", currentUser.uid));
+          const userData = userDoc.exists() ? userDoc.data() : {};
+
+          setUser({
+            id: currentUser.uid,
+            email: currentUser.email,
+            name:
+              userData.fullName ||
+              currentUser.displayName ||
+              currentUser.email?.split("@")[0] ||
+              "User",
+          });
+        } catch (error) {
+          console.error("Error fetching user data:", error);
+          setUser({
+            id: currentUser.uid,
+            email: currentUser.email,
+            name:
+              currentUser.displayName ||
+              currentUser.email?.split("@")[0] ||
+              "User",
+          });
+        }
+      } else {
+        setUser(null);
+      }
     });
     return () => unsubscribe();
   }, []);
@@ -59,9 +87,7 @@ export function Navbar() {
               className="flex items-center space-x-2 bg-purple-50 hover:bg-purple-100 px-4 py-2 rounded-lg transition-colors"
             >
               <User className="w-5 h-5 text-purple-600" />
-              <span className="text-gray-700 font-medium">
-                {user.displayName || user.email?.split("@")[0] || "User"}
-              </span>
+              <span className="text-gray-700 font-medium">{user.name}</span>
               <ChevronDown className="w-4 h-4 text-gray-600" />
             </button>
 
