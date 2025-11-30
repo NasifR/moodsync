@@ -78,6 +78,24 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
+const MoodTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    const moodValue = payload[0].value;
+    const moodLabel =
+      moodValue <= 3 ? "Negative" : moodValue <= 7 ? "Neutral" : "Positive";
+
+    return (
+      <div className="bg-white border border-gray-300 p-2 rounded-lg shadow-md">
+        <p className="text-green-600 font-semibold">{label}</p>
+        <p className="text-gray-800">
+          Mood: <span className="font-medium">{moodLabel}</span>
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
+
 type Checkin = {
   sleepHours?: number | string;
   caffeineCups?: number | string;
@@ -676,7 +694,7 @@ export default function DashboardPage({
                           }}
                           tick={{ fill: "#6B7280", fontSize: 12 }}
                         />
-                        <Tooltip />
+                        <Tooltip content={<MoodTooltip />} />
                         <Line
                           type="monotone"
                           dataKey="mood"
