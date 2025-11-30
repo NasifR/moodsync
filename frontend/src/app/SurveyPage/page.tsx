@@ -35,6 +35,7 @@ export default function SurveyPage() {
   const [predictedStress, setPredictedStress] = useState("");
   const [emotion, setEmotion] = useState("");
   const [emoji, setEmoji] = useState("");
+  const [moodScore, setMoodScore] = useState<number | undefined>(undefined);
 
   // Redirect if not logged in
   useEffect(() => {
@@ -111,11 +112,23 @@ export default function SurveyPage() {
       const detectedEmotion = emotionData.emotion;
       const detectedEmoji = emotionData.emoji;
 
+      const sentimentResp = await fetch(`${API_URL}/analyze-sentiment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: formData.dayDescription }),
+      });
+
+      if (!sentimentResp.ok) throw new Error("Sentiment API failed");
+
+      const sentimentData = await sentimentResp.json();
+      const moodScore = sentimentData.valence;
+
       // Store in Firestore
       await addDoc(collection(db, "users", user.uid, "checkins"), {
         ...formData,
         predictedStress: detectedStress,
         detectedEmotion,
+        moodScore,
         createdAt: serverTimestamp(),
       });
 
@@ -123,6 +136,7 @@ export default function SurveyPage() {
       setPredictedStress(detectedStress);
       setEmotion(detectedEmotion);
       setEmoji(detectedEmoji);
+      setMoodScore(moodScore);
 
       // Show modal
       setModalOpen(true);
@@ -153,6 +167,7 @@ export default function SurveyPage() {
         stressLevel={predictedStress}
         emotion={emotion}
         emoji={emoji}
+        moodScore={moodScore}
       />
 
       <div className="max-w-4xl mx-auto px-6 py-12">

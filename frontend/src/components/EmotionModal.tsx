@@ -8,12 +8,14 @@ export default function EmotionModal({
   stressLevel,
   emotion,
   emoji,
+  moodScore,
 }: {
   isOpen: boolean;
   onClose: () => void;
   stressLevel: any;
   emotion: string;
   emoji: string;
+  moodScore?: number;
 }) {
   if (!isOpen) return null;
 
@@ -33,8 +35,23 @@ export default function EmotionModal({
     Neutral: "text-gray-600",
   };
 
+  const moodColors: Record<string, string> = {
+    Positive: "text-green-600",
+    Neutral: "text-gray-600",
+    Negative: "text-red-600",
+  };
+
+  const getMoodLabel = (score: number | undefined): string => {
+    if (score === undefined || score === null) return "Unknown";
+    if (score >= 0.2) return "Positive";
+    if (score <= -0.2) return "Negative";
+    return "Neutral";
+  };
+
   const stressClass = stressColors[stressLevel] || "text-gray-700";
   const emotionClass = emotionColors[emotion] || "text-gray-700";
+  const moodLabel = getMoodLabel(moodScore);
+  const moodClass = moodColors[moodLabel] || "text-gray-700";
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -46,9 +63,7 @@ export default function EmotionModal({
         <div className="space-y-4 text-center text-lg">
           <p>
             <span className="font-semibold text-gray-700">Stress Level: </span>
-            <span className={`${stressClass} font-bold`}>
-              {stressLevel}
-            </span>
+            <span className={`${stressClass} font-bold`}>{stressLevel}</span>
           </p>
 
           <p>
@@ -58,6 +73,11 @@ export default function EmotionModal({
             <span className={`${emotionClass} font-bold`}>
               {emotion} {emoji}
             </span>
+          </p>
+
+          <p>
+            <span className="font-semibold text-gray-700">Mood: </span>
+            <span className={`${moodClass} font-bold`}>{moodLabel}</span>
           </p>
         </div>
 
