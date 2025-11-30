@@ -36,6 +36,7 @@ export default function SurveyPage() {
   const [emotion, setEmotion] = useState("");
   const [emoji, setEmoji] = useState("");
   const [moodScore, setMoodScore] = useState<number | undefined>(undefined);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Redirect if not logged in
   useEffect(() => {
@@ -73,6 +74,8 @@ export default function SurveyPage() {
       router.push("/SignUp");
       return;
     }
+
+    setIsSubmitting(true);
 
     try {
       // Prepare stress input
@@ -154,6 +157,8 @@ export default function SurveyPage() {
     } catch (error) {
       console.error("Error submitting survey:", error);
       alert("Failed to submit survey. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -321,9 +326,10 @@ export default function SurveyPage() {
             <div className="pt-6">
               <Button
                 type="submit"
-                className="w-full bg-purple-600 hover:bg-black hover:shadow-xl hover:shadow-purple-600 text-white text-lg py-6 transition-all"
+                disabled={isSubmitting}
+                className="w-full bg-purple-600 hover:bg-black hover:shadow-xl hover:shadow-purple-600 text-white text-lg py-6 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-purple-600"
               >
-                Submit Check-In
+                {isSubmitting ? "Submitting..." : "Submit Check-In"}
               </Button>
             </div>
           </form>
