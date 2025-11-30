@@ -102,29 +102,37 @@ export default function SurveyPage() {
       const stressData = await stressResp.json();
       const detectedStress = stressData.predicted_stress_level;
 
-      // 2️⃣ CALL EMOTION BACKEND
-      const emotionResp = await fetch(`${API_URL}/analyze-emotion`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: formData.dayDescription }),
-      });
+      let detectedEmotion = null;
+      let detectedEmoji = "";
+      let moodScore = null;
 
-      if (!emotionResp.ok) throw new Error("Emotion API failed");
+      // only run nlp analysis if there is text input
+      if (formData.dayDescription && formData.dayDescription.trim()) {
+        // call emotion analysis
+        const emotionResp = await fetch(`${API_URL}/analyze-emotion`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: formData.dayDescription }),
+        });
 
-      const emotionData = await emotionResp.json();
-      const detectedEmotion = emotionData.emotion;
-      const detectedEmoji = emotionData.emoji;
+        if (!emotionResp.ok) throw new Error("Emotion API failed");
 
-      const sentimentResp = await fetch(`${API_URL}/analyze-sentiment`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: formData.dayDescription }),
-      });
+        const emotionData = await emotionResp.json();
+        detectedEmotion = emotionData.emotion;
+        detectedEmoji = emotionData.emoji;
 
-      if (!sentimentResp.ok) throw new Error("Sentiment API failed");
+        // call sentiment analysis
+        const sentimentResp = await fetch(`${API_URL}/analyze-sentiment`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: formData.dayDescription }),
+        });
 
-      const sentimentData = await sentimentResp.json();
-      const moodScore = sentimentData.valence;
+        if (!sentimentResp.ok) throw new Error("Sentiment API failed");
+
+        const sentimentData = await sentimentResp.json();
+        moodScore = sentimentData.valence;
+      }
 
       // Store in Firestore
       await addDoc(collection(db, "users", user.uid, "checkins"), {

@@ -396,6 +396,11 @@ export default function DashboardPage({
   // timeline: use the most recent up to 12 checkins, oldest first
   const emotionTimeline = useMemo(() => {
     const items = checkins
+      .filter((c) => {
+        const emotion =
+          c.detectedEmotion ?? c.detected_emotion ?? c.predictedEmotion ?? "";
+        return emotion && emotion.toString().trim() !== "";
+      })
       .slice(0, 12)
       .map((c) => {
         const d = toDate(c.createdAt);
@@ -436,7 +441,7 @@ export default function DashboardPage({
           ts: toDate(c.createdAt).getTime(),
         };
       })
-      .sort((a, b) => a.ts - b.ts) // oldest first
+      .sort((a, b) => a.ts - b.ts)
       .map(({ ts, ...rest }) => rest);
     return items;
   }, [checkins]);
@@ -642,18 +647,18 @@ export default function DashboardPage({
                       </CardDescription>
                     </div>
                     <div className="text-sm text-gray-600">
-                      {last7Series.length
-                        ? `${last7Series.length} days`
+                      {last7Series.filter((s) => s.mood > 0).length
+                        ? `${last7Series.filter((s) => s.mood > 0).length} days`
                         : "No data"}
                     </div>
                   </div>
                 </CardHeader>
 
                 <CardContent>
-                  {last7Series.length ? (
+                  {last7Series.filter((s) => s.mood > 0).length ? (
                     <ResponsiveContainer width="100%" height={280}>
                       <LineChart
-                        data={last7Series}
+                        data={last7Series.filter((s) => s.mood > 0)}
                         margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
                       >
                         <CartesianGrid strokeDasharray="3 3" stroke="#F3E8FF" />
@@ -684,8 +689,8 @@ export default function DashboardPage({
                     </ResponsiveContainer>
                   ) : (
                     <div className="py-8 text-center text-gray-500">
-                      No mood data yet. Submit your first check-in to see it
-                      here.
+                      No mood data available. Add journal entries to your
+                      check-ins to see mood analysis here.
                     </div>
                   )}
                 </CardContent>
@@ -848,7 +853,7 @@ export default function DashboardPage({
                                         (c.dayDescription.length > 80
                                           ? "…"
                                           : "")
-                                      : "No description"}
+                                      : "No journal entry provided for this check-in"}
                                   </p>
                                 </div>
                               </div>
@@ -861,12 +866,17 @@ export default function DashboardPage({
                               <div className="font-semibold text-gray-900">
                                 {displayStressLabel(c.predictedStress)}
                               </div>
-                              <div className="text-sm text-gray-500 mt-2 mb-1">
-                                Mood
-                              </div>
-                              <div className="font-semibold text-gray-900">
-                                {getMoodLabel(c.moodScore)}
-                              </div>
+                              {c.moodScore !== null &&
+                                c.moodScore !== undefined && (
+                                  <>
+                                    <div className="text-sm text-gray-500 mt-2 mb-1">
+                                      Mood
+                                    </div>
+                                    <div className="font-semibold text-gray-900">
+                                      {getMoodLabel(c.moodScore)}
+                                    </div>
+                                  </>
+                                )}
                               <div className="text-xs text-gray-400 mt-1">
                                 {toDate(c.createdAt).toLocaleString()}
                               </div>
