@@ -59,7 +59,7 @@ export function Navbar() {
     router.push("/");
   };
 
-  const unauthenticatedNavItems = [
+  const navItems = [
     { label: "Features", href: "#features" },
     { label: "Our Mission", href: "#mission-vision" },
   ];
@@ -74,8 +74,7 @@ export function Navbar() {
 
         <nav className="hidden md:flex items-center space-x-8">
           {mounted &&
-            !user &&
-            unauthenticatedNavItems.map((item) => (
+            navItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
