@@ -61,7 +61,7 @@ export function Navbar() {
 
   const unauthenticatedNavItems = [
     { label: "Features", href: "#features" },
-    { label: "Mission", href: "#mission-vision" },
+    { label: "Our Mission", href: "#mission-vision" },
   ];
 
   return (
