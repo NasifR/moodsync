@@ -74,6 +74,7 @@ export function Navbar() {
 
         <nav className="hidden md:flex items-center space-x-8">
           {mounted &&
+            pathname === "/" &&
             navItems.map((item) => (
               <Link
                 key={item.href}
