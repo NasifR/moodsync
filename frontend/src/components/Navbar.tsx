@@ -13,6 +13,11 @@ export function Navbar() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -68,7 +73,8 @@ export function Navbar() {
         </Link>
 
         <nav className="hidden md:flex items-center space-x-8">
-          {!user &&
+          {mounted &&
+            !user &&
             unauthenticatedNavItems.map((item) => (
               <Link
                 key={item.href}
@@ -80,7 +86,7 @@ export function Navbar() {
             ))}
         </nav>
 
-        {user ? (
+        {mounted && user ? (
           <div className="relative">
             <button
               onClick={() => setDropdownOpen(!dropdownOpen)}
@@ -125,12 +131,14 @@ export function Navbar() {
               </>
             )}
           </div>
-        ) : (
+        ) : mounted ? (
           <Link href="/SignUp">
             <Button className="bg-purple-600 hover:bg-black hover:cursor-pointer text-white hover:shadow-lg hover:shadow-purple-600 transition-all">
               Get Started
             </Button>
           </Link>
+        ) : (
+          <div className="w-32 h-10" />
         )}
       </div>
     </header>
