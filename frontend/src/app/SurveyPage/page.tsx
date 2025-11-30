@@ -75,6 +75,18 @@ export default function SurveyPage() {
       return;
     }
 
+    const hasJournalEntry =
+      formData.dayDescription && formData.dayDescription.trim();
+
+    if (!hasJournalEntry) {
+      const confirmed = window.confirm(
+        "You haven't provided a journal entry. Your emotion and mood will not be analyzed. Are you sure you want to submit this check-in?"
+      );
+      if (!confirmed) {
+        return;
+      }
+    }
+
     setIsSubmitting(true);
 
     try {

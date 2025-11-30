@@ -66,20 +66,31 @@ export default function EmotionModal({
             <span className={`${stressClass} font-bold`}>{stressLevel}</span>
           </p>
 
-          <p>
-            <span className="font-semibold text-gray-700">
-              Detected Emotion:
-            </span>{" "}
-            <span className={`${emotionClass} font-bold`}>
-              {emotion} {emoji}
-            </span>
-          </p>
+          {emotion && (
+            <p>
+              <span className="font-semibold text-gray-700">
+                Detected Emotion:
+              </span>{" "}
+              <span className={`${emotionClass} font-bold`}>
+                {emotion} {emoji}
+              </span>
+            </p>
+          )}
 
-          <p>
-            <span className="font-semibold text-gray-700">Mood: </span>
-            <span className={`${moodClass} font-bold`}>{moodLabel}</span>
-          </p>
+          {moodScore !== null && moodScore !== undefined && (
+            <p>
+              <span className="font-semibold text-gray-700">Mood: </span>
+              <span className={`${moodClass} font-bold`}>{moodLabel}</span>
+            </p>
+          )}
         </div>
+
+        {(!emotion || moodScore === null || moodScore === undefined) && (
+          <p className="text-sm text-gray-500 text-center mt-4">
+            Your emotion and mood could not be analyzed since you did not
+            provide a journal entry.
+          </p>
+        )}
 
         <div className="mt-8">
           <Button
