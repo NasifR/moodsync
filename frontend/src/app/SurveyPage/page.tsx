@@ -106,7 +106,6 @@ export default function SurveyPage() {
     }));
   };
 
-  // SUBMIT LOGIC (same as your old one, just added Emotion API)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
