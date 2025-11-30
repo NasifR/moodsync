@@ -82,7 +82,9 @@ export default function SurveyPage() {
       if (!user) {
         router.push("/SignUp");
       } else {
-        checkTodayCheckin(user.uid);
+        // temp patch to allow multiple check-ins per day for testing
+        // checkTodayCheckin(user.uid);
+        setCheckingStatus(false);
       }
     });
     return () => unsubscribe();
