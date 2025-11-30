@@ -110,11 +110,6 @@ type Checkin = {
   [key: string]: any;
 };
 
-interface DashboardPageProps {
-  user?: { id: string; email?: string; name?: string } | null;
-  onLogout?: () => void;
-}
-
 function toDate(x: any): Date {
   // Handle Firestore Timestamp, number/ms, or Date
   if (!x) return new Date();
@@ -164,12 +159,9 @@ function mapMoodToNumber(moodScore: number | string | undefined): number {
   return Math.round((score + 1) * 5);
 }
 
-export default function DashboardPage({
-  user: userProp,
-  onLogout,
-}: DashboardPageProps) {
+export default function DashboardPage() {
   const router = useRouter();
-  const [user, setUser] = useState<any | null>(userProp ?? null);
+  const [user, setUser] = useState<any | null>(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
 
   // check auth and redirect if not logged in
