@@ -853,7 +853,7 @@ export default function DashboardPage({
                                         (c.dayDescription.length > 80
                                           ? "…"
                                           : "")
-                                      : "No journal entry provided for this check-in"}
+                                      : ""}
                                   </p>
                                 </div>
                               </div>
