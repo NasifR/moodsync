@@ -303,7 +303,12 @@ export default function DashboardPage() {
 
     checkins.forEach((c) => {
       const d = toDate(c.createdAt);
-      const dStr = d.toISOString().slice(0, 10);
+      const dStr =
+        d.getFullYear() +
+        "-" +
+        String(d.getMonth() + 1).padStart(2, "0") +
+        "-" +
+        String(d.getDate()).padStart(2, "0");
       pushEntry(dStr, d, c);
     });
 
@@ -324,7 +329,12 @@ export default function DashboardPage() {
           const d = toDate(c.createdAt);
           return {
             dateLabel: formatShortDate(d),
-            dateIso: d.toISOString().slice(0, 10),
+            dateIso:
+              d.getFullYear() +
+              "-" +
+              String(d.getMonth() + 1).padStart(2, "0") +
+              "-" +
+              String(d.getDate()).padStart(2, "0"),
             stress: mapStressToNumber(c.predictedStress),
             physical: Number(c.physicalActivity) || 0,
             screen: Number(c.screenTime) || 0,
@@ -346,7 +356,12 @@ export default function DashboardPage() {
         : 0;
       return {
         dateLabel: formatShortDate(u.date),
-        dateIso: u.date.toISOString().slice(0, 10),
+        dateIso:
+          u.date.getFullYear() +
+          "-" +
+          String(u.date.getMonth() + 1).padStart(2, "0") +
+          "-" +
+          String(u.date.getDate()).padStart(2, "0"),
         stress: avgStress,
         physical: Math.round(sumPhysical),
         screen: Math.round(sumScreen),
