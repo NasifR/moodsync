@@ -231,14 +231,18 @@ export default function AnalyticsPage() {
 
   // weekly emotion counts (for bar)
   const weeklyEmotionCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    EMOTIONS.forEach((e) => (counts[e] = 0));
-    oneWeekFiltered.forEach((c) => {
-      const e = c.detectedEmotion ?? c.detected_emotion ?? c.predictedEmotion;
-      if (e && counts[e] !== undefined) counts[e]++;
-    });
-    return EMOTIONS.map((e) => ({ emotion: e, count: counts[e] }));
-  }, [oneWeekFiltered]);
+  const counts: Record<string, number> = {};
+  EMOTIONS.forEach((e) => (counts[e] = 0));
+
+  oneWeekFiltered.forEach((c) => {
+    const e = c.detectedEmotion ?? c.detected_emotion ?? c.predictedEmotion;
+    if (e && counts[e] !== undefined) counts[e]++;
+  });
+
+  return EMOTIONS
+    .map((e) => ({ emotion: e, count: counts[e] }))
+    .sort((a, b) => b.count - a.count); // ← SORT DESC
+}, [oneWeekFiltered]);
 
   // weekly avg stress by day (for line)
   const weeklyAvgStressByDay = useMemo(() => {
@@ -262,7 +266,8 @@ export default function AnalyticsPage() {
   }, [oneWeekFiltered]);
 
   // weekly sleep vs stress (scatter)
-  const weeklySleepStress = useMemo(() => {
+  // Weekly Sleep vs Stress (Scatter Chart)
+ const weeklySleepStress = useMemo(() => {
     return oneWeekFiltered
       .map((c) => {
         const sleepRaw = c.sLeepHours ?? c.sleepHours ?? c.sleep ?? 0;
@@ -273,6 +278,7 @@ export default function AnalyticsPage() {
       })
       .filter(Boolean) as { sleep: number; stress: number }[];
   }, [oneWeekFiltered]);
+
 
   // top 3 emotions (dynamic)
   const top3Emotions = useMemo(() => {
