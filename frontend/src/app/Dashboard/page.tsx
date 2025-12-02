@@ -516,9 +516,11 @@ export default function DashboardPage() {
                 <span>Survey</span>
               </button>
             </Link>
+            <Link href="/Analytics">
             <button className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-purple-100 hover:bg-white/10 transition-colors">
               <span>Analytics</span>
             </button>
+            </Link>
             <Link href="/">
               <button className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-purple-100 hover:bg-white/10 transition-colors">
                 <span>Home</span>
