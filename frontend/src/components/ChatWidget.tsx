@@ -3,13 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import {
-  MessageCircle,
-  X,
-  Send,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
+import { MessageCircle, X, Send } from "lucide-react";
 import { auth, db } from "../../lib/firebaseConfig";
 import { collection, query, orderBy, limit, getDocs } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
@@ -22,11 +16,12 @@ type Message = {
 };
 
 const PRESET_MESSAGES = [
+  "Based on my recent check-ins, what are my main stress triggers?",
   "What can I do to reduce my stress levels?",
-  "How is my sleep affecting my mood?",
-  "What patterns do you see in my wellness data?",
-  "Give me tips for better emotional wellbeing",
-  "How can I improve my daily routine?",
+  "What correlations do you see between my sleep and my mood?",
+  "How has my mood changed over the past week?",
+  "How can I improve my mood?",
+  "Give me tips for better emotional wellbeing.",
 ];
 
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
@@ -37,9 +32,6 @@ export default function ChatWidget() {
   const [loading, setLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const presetScrollRef = useRef<HTMLDivElement>(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(true);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -55,35 +47,6 @@ export default function ChatWidget() {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
-
-  const checkScrollButtons = () => {
-    if (presetScrollRef.current) {
-      const { scrollLeft, scrollWidth, clientWidth } = presetScrollRef.current;
-      setCanScrollLeft(scrollLeft > 0);
-      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 1);
-    }
-  };
-
-  useEffect(() => {
-    checkScrollButtons();
-  }, [isOpen]);
-
-  const scrollPresets = (direction: "left" | "right") => {
-    if (presetScrollRef.current) {
-      const scrollAmount = 200;
-      const newScrollLeft =
-        direction === "left"
-          ? presetScrollRef.current.scrollLeft - scrollAmount
-          : presetScrollRef.current.scrollLeft + scrollAmount;
-
-      presetScrollRef.current.scrollTo({
-        left: newScrollLeft,
-        behavior: "smooth",
-      });
-
-      setTimeout(checkScrollButtons, 300);
-    }
-  };
 
   const fetchUserContext = async () => {
     if (!currentUser) {
@@ -275,53 +238,20 @@ export default function ChatWidget() {
             <div ref={messagesEndRef} />
           </div>
 
-          <div className="p-4 bg-white border-t border-gray-200 flex-shrink-0">
+          <div className="p-4 bg-white border-t border-gray-200 flex-shrink-0 max-h-48">
             <div>
               <p className="text-xs text-gray-500 mb-2">Choose a question:</p>
-              <div className="relative flex items-center gap-2">
-                <button
-                  onClick={() => scrollPresets("left")}
-                  disabled={!canScrollLeft}
-                  className={`flex-shrink-0 h-8 w-8 flex items-center justify-center rounded-lg transition-colors ${
-                    canScrollLeft
-                      ? "bg-purple-100 hover:bg-purple-200 text-purple-700"
-                      : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                  }`}
-                  aria-label="Scroll left"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-
-                <div
-                  ref={presetScrollRef}
-                  onScroll={checkScrollButtons}
-                  className="flex-1 flex gap-2 overflow-x-auto scrollbar-hide"
-                  style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-                >
-                  {PRESET_MESSAGES.map((preset, index) => (
-                    <button
-                      key={index}
-                      onClick={() => sendMessage(preset)}
-                      disabled={loading}
-                      className="flex-shrink-0 px-3 py-2 text-sm bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-                    >
-                      {preset}
-                    </button>
-                  ))}
-                </div>
-
-                <button
-                  onClick={() => scrollPresets("right")}
-                  disabled={!canScrollRight}
-                  className={`flex-shrink-0 h-8 w-8 flex items-center justify-center rounded-lg transition-colors ${
-                    canScrollRight
-                      ? "bg-purple-100 hover:bg-purple-200 text-purple-700"
-                      : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                  }`}
-                  aria-label="Scroll right"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </button>
+              <div className="max-h-36 overflow-y-auto space-y-2">
+                {PRESET_MESSAGES.map((preset, index) => (
+                  <button
+                    key={index}
+                    onClick={() => sendMessage(preset)}
+                    disabled={loading}
+                    className="w-full px-3 py-2 text-sm bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-left"
+                  >
+                    {preset}
+                  </button>
+                ))}
               </div>
             </div>
           </div>
