@@ -230,7 +230,7 @@ export default function AnalyticsPage() {
   }, [allCheckins]);
 
   // weekly emotion counts (for bar)
-  const weeklyEmotionCounts = useMemo(() => {
+ const weeklyEmotionCounts = useMemo(() => {
   const counts: Record<string, number> = {};
   EMOTIONS.forEach((e) => (counts[e] = 0));
 
@@ -239,31 +239,53 @@ export default function AnalyticsPage() {
     if (e && counts[e] !== undefined) counts[e]++;
   });
 
-  return EMOTIONS
+  // Build sorted list
+  const sorted = EMOTIONS
     .map((e) => ({ emotion: e, count: counts[e] }))
-    .sort((a, b) => b.count - a.count); // ← SORT DESC
+    .sort((a, b) => b.count - a.count);
+
+  // If too many labels, only return top 10
+  return sorted.slice(0, 10);
 }, [oneWeekFiltered]);
 
-  // weekly avg stress by day (for line)
-  const weeklyAvgStressByDay = useMemo(() => {
-    const map: Record<string, { date: Date; values: number[] }> = {};
-    const now = new Date();
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
-      const key = d.toISOString().slice(0, 10);
-      map[key] = { date: d, values: [] };
+
+
+const weeklyAvgStressByDay = useMemo(() => {
+  const map: Record<string, { date: Date; values: number[] }> = {};
+  const now = new Date();
+
+  // Build map for the last 7 days (LOCAL, not UTC)
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+    const key = d.toLocaleDateString("en-CA"); // YYYY-MM-DD (local)
+    map[key] = { date: d, values: [] };
+  }
+
+  // Loop through checkins
+  oneWeekFiltered.forEach((c) => {
+    const createdLocal = toDate(c.createdAt);
+
+    // ALSO USE LOCAL DATE (fixes the missing updates)
+    const dStr = createdLocal.toLocaleDateString("en-CA");
+
+    if (map[dStr]) {
+      // Keep your stress mapping EXACTLY as you want (1–3)
+      const stressValue = mapStressToNumber(c.predictedStress);
+      map[dStr].values.push(stressValue);
     }
-    oneWeekFiltered.forEach((c) => {
-      const dStr = toDate(c.createdAt).toISOString().slice(0, 10);
-      if (map[dStr]) map[dStr].values.push(mapStressToNumber(c.predictedStress));
-    });
-    return Object.values(map).map((entry) => ({
-      dayLabel: entry.date.toLocaleDateString(undefined, { weekday: "short" }),
-      avgStress: entry.values.length
+  });
+
+  // Produce the final array
+  return Object.values(map).map((entry) => ({
+    dayLabel: entry.date.toLocaleDateString(undefined, { weekday: "short" }),
+    avgStress:
+      entry.values.length
         ? +(entry.values.reduce((a, b) => a + b, 0) / entry.values.length).toFixed(2)
         : 0,
-    }));
-  }, [oneWeekFiltered]);
+  }));
+}, [oneWeekFiltered]);
+
+
 
   // weekly sleep vs stress (scatter)
   // Weekly Sleep vs Stress (Scatter Chart)
