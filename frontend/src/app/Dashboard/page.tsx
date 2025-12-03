@@ -975,7 +975,7 @@ export default function DashboardPage() {
                     <div>
                       <Button
                         onClick={() => router.push("/SurveyPage")}
-                        className="w-full bg-purple-600 border text-white border-purple-200 hover:bg-black hover:text-white hover:shadow-2xl hover:shadow-purple-600bg-purple-600 hover:cursor-pointer hover:shadow-purple-600 transition-all"
+                        className="w-full bg-purple-600 text-white border-purple-200 hover:bg-black hover:text-white hover:shadow-xl hover:shadow-purple-600 hover:cursor-pointer transition-all"
                       >
                         Add today's check-in
                       </Button>

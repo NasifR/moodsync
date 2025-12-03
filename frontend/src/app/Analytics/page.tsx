@@ -395,7 +395,9 @@ export default function AnalyticsPage() {
               <Sparkles className="w-8 h-8 text-white" />
             </div>
             <p className="text-white text-sm mb-2">Check your condition</p>
-            <p className="text-purple-200 text-xs mb-3">Track stress, activity & screen time</p>
+            <p className="text-purple-200 text-xs mb-3">
+              Track stress, activity & screen time
+            </p>
             <Button className="w-full bg-green-500 hover:bg-green-600 text-white">
               Check It Now
             </Button>
@@ -412,7 +414,9 @@ export default function AnalyticsPage() {
               <h1 className="text-2xl text-gray-900">
                 Hi, <span className="font-semibold">{user.name}</span> 👋
               </h1>
-              <p className="text-gray-600 text-sm mt-1">Welcome back — here's your analytics overview.</p>
+              <p className="text-gray-600 text-sm mt-1">
+                Welcome back — here's your analytics overview.
+              </p>
             </div>
             <div className="flex items-center space-x-4">
               <div className="relative">
@@ -441,12 +445,17 @@ export default function AnalyticsPage() {
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>
-                      <CardTitle className="text-gray-700 font-bold">Weekly Emotion Cloud</CardTitle>
+                      <CardTitle className="text-gray-700 font-bold">
+                        Weekly Emotion Cloud
+                      </CardTitle>
                       <CardDescription className="text-gray-500 mt-1">
-                        Anonymized — includes everyone's check-ins from the past 7 days. Top 3 are centered.
+                        Anonymized — includes everyone's check-ins from the past
+                        7 days. Top 3 are centered.
                       </CardDescription>
                     </div>
-                    <div className="text-sm text-gray-600">{oneWeekFiltered.length} check-ins</div>
+                    <div className="text-sm text-gray-600">
+                      {oneWeekFiltered.length} check-ins
+                    </div>
                   </div>
                 </CardHeader>
 
@@ -463,17 +472,34 @@ export default function AnalyticsPage() {
               {/* Emotion distribution */}
               <Card className="border-purple-100 shadow-lg">
                 <CardHeader>
-                  <CardTitle className="text-gray-700 font-bold">Weekly Emotion Distribution</CardTitle>
-                  <CardDescription className="text-gray-500 mt-1">Counts across all users (anonymized)</CardDescription>
+                  <CardTitle className="text-gray-700 font-bold">
+                    Weekly Emotion Distribution
+                  </CardTitle>
+                  <CardDescription className="text-gray-500 mt-1">
+                    Counts across all users (anonymized)
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={260}>
-                    <BarChart data={weeklyEmotionCounts} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                    <BarChart
+                      data={weeklyEmotionCounts}
+                      margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
+                    >
                       <CartesianGrid strokeDasharray="3 3" stroke="#F3E8FF" />
-                      <XAxis dataKey="emotion" tick={{ fill: "#6B7280", fontSize: 12 }} />
-                      <YAxis tick={{ fill: "#6B7280", fontSize: 12 }} allowDecimals={false} />
+                      <XAxis
+                        dataKey="emotion"
+                        tick={{ fill: "#6B7280", fontSize: 12 }}
+                      />
+                      <YAxis
+                        tick={{ fill: "#6B7280", fontSize: 12 }}
+                        allowDecimals={false}
+                      />
                       <Tooltip />
-                      <Bar dataKey="count" fill="#7C3AED" radius={[6, 6, 0, 0]} />
+                      <Bar
+                        dataKey="count"
+                        fill="#7C3AED"
+                        radius={[6, 6, 0, 0]}
+                      />
                     </BarChart>
                   </ResponsiveContainer>
                 </CardContent>
@@ -482,18 +508,35 @@ export default function AnalyticsPage() {
               {/* Stress over time */}
               <Card className="border-purple-100 shadow-lg">
                 <CardHeader>
-                  <CardTitle className="text-gray-700 font-bold">Weekly Average Stress Levels</CardTitle>
-                  <CardDescription className="text-gray-500 mt-1">Average predicted stress per day (1=Low,2=Med,3=High)</CardDescription>
+                  <CardTitle className="text-gray-700 font-bold">
+                    Weekly Average Stress Levels
+                  </CardTitle>
+                  <CardDescription className="text-gray-500 mt-1">
+                    Average predicted stress per day (1=Low,2=Med,3=High)
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={260}>
                     <LineChart data={weeklyAvgStressByDay}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#F3E8FF" />
-                      <XAxis dataKey="dayLabel" tick={{ fill: "#6B7280", fontSize: 12 }} />
-                      <YAxis domain={[0, 3]} ticks={[0, 1, 2, 3]} tick={{ fill: "#6B7280", fontSize: 12 }} />
+                      <XAxis
+                        dataKey="dayLabel"
+                        tick={{ fill: "#6B7280", fontSize: 12 }}
+                      />
+                      <YAxis
+                        domain={[0, 3]}
+                        ticks={[0, 1, 2, 3]}
+                        tick={{ fill: "#6B7280", fontSize: 12 }}
+                      />
                       <Tooltip />
                       <Legend />
-                      <Line type="monotone" dataKey="avgStress" stroke="#0ea5e9" strokeWidth={3} dot={{ r: 4 }} />
+                      <Line
+                        type="monotone"
+                        dataKey="avgStress"
+                        stroke="#0ea5e9"
+                        strokeWidth={3}
+                        dot={{ r: 4 }}
+                      />
                     </LineChart>
                   </ResponsiveContainer>
                 </CardContent>
@@ -502,18 +545,37 @@ export default function AnalyticsPage() {
               {/* Sleep vs Stress */}
               <Card className="border-purple-100 shadow-lg">
                 <CardHeader>
-                  <CardTitle className="text-gray-700 font-bold">Weekly Sleep vs Stress</CardTitle>
-                  <CardDescription className="text-gray-500 mt-1">Each dot = one anonymized check-in</CardDescription>
+                  <CardTitle className="text-gray-700 font-bold">
+                    Weekly Sleep vs Stress
+                  </CardTitle>
+                  <CardDescription className="text-gray-500 mt-1">
+                    Each dot = one anonymized check-in
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={320}>
                     <ScatterChart>
                       <CartesianGrid strokeDasharray="3 3" stroke="#F3E8FF" />
-                      <XAxis type="number" dataKey="sleep" name="Sleep (hours)" unit="h" tick={{ fill: "#6B7280" }} />
-                      <YAxis type="number" dataKey="stress" name="Stress" tick={{ fill: "#6B7280" }} />
+                      <XAxis
+                        type="number"
+                        dataKey="sleep"
+                        name="Sleep (hours)"
+                        unit="h"
+                        tick={{ fill: "#6B7280" }}
+                      />
+                      <YAxis
+                        type="number"
+                        dataKey="stress"
+                        name="Stress"
+                        tick={{ fill: "#6B7280" }}
+                      />
                       <ZAxis range={[60, 400]} />
                       <Tooltip cursor={{ strokeDasharray: "3 3" }} />
-                      <Scatter name="Users" data={weeklySleepStress} fill="#16a34a" />
+                      <Scatter
+                        name="Users"
+                        data={weeklySleepStress}
+                        fill="#16a34a"
+                      />
                     </ScatterChart>
                   </ResponsiveContainer>
                 </CardContent>
@@ -524,24 +586,37 @@ export default function AnalyticsPage() {
             <div className="space-y-6">
               <Card className="border-purple-100 shadow-lg text-gray-700">
                 <CardHeader>
-                  <CardTitle className="text-gray-700 font-bold">Overview</CardTitle>
-                  <CardDescription className="text-gray-500 mt-1">Quick insights (anonymous)</CardDescription>
+                  <CardTitle className="text-gray-700 font-bold">
+                    Overview
+                  </CardTitle>
+                  <CardDescription className="text-gray-500 mt-1">
+                    Quick insights (anonymous)
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-gray-500">Average stress (week)</p>
+                        <p className="text-sm text-gray-500">
+                          Average stress (week)
+                        </p>
                         <p className="text-2xl font-semibold text-gray-900">
                           {weeklyAvgStressByDay.length
-                            ? Math.round(weeklyAvgStressByDay.reduce((a, b) => a + b.avgStress, 0) / weeklyAvgStressByDay.length)
+                            ? Math.round(
+                                weeklyAvgStressByDay.reduce(
+                                  (a, b) => a + b.avgStress,
+                                  0
+                                ) / weeklyAvgStressByDay.length
+                              )
                             : "—"}
                           <span className="text-xs text-gray-500"> /3</span>
                         </p>
                       </div>
                       <div className="text-right">
                         <p className="text-sm text-gray-500">Check-ins</p>
-                        <p className="font-semibold text-gray-900">{oneWeekFiltered.length}</p>
+                        <p className="font-semibold text-gray-900">
+                          {oneWeekFiltered.length}
+                        </p>
                       </div>
                     </div>
 
@@ -551,14 +626,24 @@ export default function AnalyticsPage() {
                           <Sparkles className="w-5 h-5 text-blue-600" />
                         </div>
                         <div>
-                          <p className="font-medium text-gray-900">Community snapshot</p>
-                          <p className="text-sm text-gray-500">This shows anonymized check-ins from all active users.</p>
+                          <p className="font-medium text-gray-900">
+                            Community snapshot
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            This shows anonymized check-ins from all active
+                            users.
+                          </p>
                         </div>
                       </div>
                     </div>
 
                     <div>
-                      <Button onClick={() => router.push("/SurveyPage")} className="w-full bg-purple-600 text-white">Add today's check-in</Button>
+                      <Button
+                        onClick={() => router.push("/SurveyPage")}
+                        className="w-full bg-purple-600 text-white border-purple-200 hover:bg-black hover:text-white hover:shadow-xl hover:shadow-purple-600 hover:cursor-pointer transition-all"
+                      >
+                        Add today's check-in
+                      </Button>
                     </div>
                   </div>
                 </CardContent>
@@ -566,23 +651,39 @@ export default function AnalyticsPage() {
 
               <Card className="border-purple-100 shadow-lg">
                 <CardHeader>
-                  <CardTitle className="text-gray-700 font-bold">Tips</CardTitle>
-                  <CardDescription className="text-gray-500 mt-1">Quick actions to reduce stress</CardDescription>
+                  <CardTitle className="text-gray-700 font-bold">
+                    Tips
+                  </CardTitle>
+                  <CardDescription className="text-gray-500 mt-1">
+                    Quick actions to reduce stress
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <ul className="space-y-3">
                     <li className="flex items-start gap-3">
-                      <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600">1</div>
+                      <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600">
+                        1
+                      </div>
                       <div>
-                        <p className="font-bold text-gray-700">Short breathing exercise</p>
-                        <p className="text-sm text-gray-500">Try 4-4-4 breathing for 60 seconds.</p>
+                        <p className="font-bold text-gray-700">
+                          Short breathing exercise
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Try 4-4-4 breathing for 60 seconds.
+                        </p>
                       </div>
                     </li>
                     <li className="flex items-start gap-3">
-                      <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600">2</div>
+                      <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600">
+                        2
+                      </div>
                       <div>
-                        <p className="font-bold text-gray-700">Step away from screens</p>
-                        <p className="text-sm text-gray-500">Take a 10-minute walk to reset focus.</p>
+                        <p className="font-bold text-gray-700">
+                          Step away from screens
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Take a 10-minute walk to reset focus.
+                        </p>
                       </div>
                     </li>
                   </ul>
