@@ -504,10 +504,17 @@ export default function DashboardPage() {
             <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
               <Heart className="w-6 h-6 text-white" />
             </div>
+            <Link href="/">
             <span className="text-white text-xl">MindSight</span>
+            </Link>
           </div>
 
           <nav className="space-y-2 mb-8">
+            <Link href="/">
+              <button className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-purple-100 hover:bg-white/10 transition-colors">
+                <span>Home</span>
+              </button>
+            </Link>
             <button className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl bg-white/20 text-white backdrop-blur-sm">
               <span>Dashboard</span>
             </button>
@@ -521,11 +528,7 @@ export default function DashboardPage() {
               <span>Analytics</span>
             </button>
             </Link>
-            <Link href="/">
-              <button className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-purple-100 hover:bg-white/10 transition-colors">
-                <span>Home</span>
-              </button>
-            </Link>
+            
           </nav>
 
           <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4">
