@@ -340,6 +340,11 @@ export default function AnalyticsPage() {
           </div>
 
           <nav className="space-y-2 mb-8">
+            <Link href="/">
+              <button className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-purple-100 hover:bg-white/10 transition-colors">
+                <span>Home</span>
+              </button>
+            </Link>
             <Link href="/Dashboard">
               <button className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-purple-100 hover:bg-white/10 transition-colors">
                 <span>Dashboard</span>
@@ -353,11 +358,7 @@ export default function AnalyticsPage() {
             <button className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl bg-white/20 text-white">
               <span>Analytics</span>
             </button>
-            <Link href="/">
-              <button className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-purple-100 hover:bg-white/10 transition-colors">
-                <span>Home</span>
-              </button>
-            </Link>
+            
           </nav>
 
           <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4">
