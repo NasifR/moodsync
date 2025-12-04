@@ -137,6 +137,59 @@ function getEmojiForEmotion(e: string) {
   }
 }
 
+const EmotionDistributionTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    const count = payload[0].value;
+    return (
+      <div className="bg-white border border-gray-300 p-2 rounded-lg shadow-md">
+        <p className="text-orange-600 font-semibold">{label}</p>
+        <p className="text-gray-800">
+          Count: <span className="font-medium">{count}</span>
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
+
+const WeeklyStressTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    const stressValue = payload[0].value;
+    const stressLabel =
+      stressValue <= 1 ? "Low" : stressValue <= 2 ? "Medium" : "High";
+    return (
+      <div className="bg-white border border-gray-300 p-2 rounded-lg shadow-md">
+        <p className="text-cyan-600 font-semibold">{label}</p>
+        <p className="text-gray-800">
+          Stress: <span className="font-medium">{stressLabel}</span>
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
+
+const SleepStressTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    const sleep = payload.find((p: any) => p.dataKey === "sleep")?.value;
+    const stress = payload.find((p: any) => p.dataKey === "stress")?.value;
+    const stressLabel = stress <= 1 ? "Low" : stress <= 2 ? "Medium" : "High";
+
+    return (
+      <div className="bg-white border border-gray-300 p-2 rounded-lg shadow-md">
+        <p className="text-green-600 font-semibold">Check-in</p>
+        <p className="text-gray-800">
+          Sleep: <span className="font-medium">{sleep}h</span>
+        </p>
+        <p className="text-gray-800">
+          Stress: <span className="font-medium">{stressLabel}</span>
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
+
 /* ---------------------------
    Page Component
    --------------------------- */
@@ -190,7 +243,9 @@ export default function AnalyticsPage() {
         const usersSnap = await getDocs(collection(db, "users"));
         const arr: Checkin[] = [];
         for (const udoc of usersSnap.docs) {
-          const snap = await getDocs(collection(db, "users", udoc.id, "checkins"));
+          const snap = await getDocs(
+            collection(db, "users", udoc.id, "checkins")
+          );
           snap.forEach((d) => {
             const data = d.data();
             // unify createdAt into JS Date if firestore Timestamp
@@ -231,43 +286,61 @@ export default function AnalyticsPage() {
 
   // weekly emotion counts (for bar)
   const weeklyEmotionCounts = useMemo(() => {
-  const counts: Record<string, number> = {};
-  EMOTIONS.forEach((e) => (counts[e] = 0));
+    const counts: Record<string, number> = {};
+    EMOTIONS.forEach((e) => (counts[e] = 0));
 
-  oneWeekFiltered.forEach((c) => {
-    const e = c.detectedEmotion ?? c.detected_emotion ?? c.predictedEmotion;
-    if (e && counts[e] !== undefined) counts[e]++;
-  });
+    oneWeekFiltered.forEach((c) => {
+      const e = c.detectedEmotion ?? c.detected_emotion ?? c.predictedEmotion;
+      if (e && counts[e] !== undefined) counts[e]++;
+    });
 
-  return EMOTIONS
-    .map((e) => ({ emotion: e, count: counts[e] }))
-    .sort((a, b) => b.count - a.count); // ← SORT DESC
-}, [oneWeekFiltered]);
+    // Build sorted list
+    const sorted = EMOTIONS.map((e) => ({ emotion: e, count: counts[e] })).sort(
+      (a, b) => b.count - a.count
+    );
 
-  // weekly avg stress by day (for line)
+    // If too many labels, only return top 10
+    return sorted.slice(0, 10);
+  }, [oneWeekFiltered]);
+
   const weeklyAvgStressByDay = useMemo(() => {
     const map: Record<string, { date: Date; values: number[] }> = {};
     const now = new Date();
+
+    // Build map for the last 7 days (LOCAL, not UTC)
     for (let i = 6; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
-      const key = d.toISOString().slice(0, 10);
+      const key = d.toLocaleDateString("en-US"); // YYYY-MM-DD (local)
       map[key] = { date: d, values: [] };
     }
+
+    // Loop through checkins
     oneWeekFiltered.forEach((c) => {
-      const dStr = toDate(c.createdAt).toISOString().slice(0, 10);
-      if (map[dStr]) map[dStr].values.push(mapStressToNumber(c.predictedStress));
+      const createdLocal = toDate(c.createdAt);
+
+      // ALSO USE LOCAL DATE (fixes the missing updates)
+      const dStr = createdLocal.toLocaleDateString("en-US");
+
+      if (map[dStr]) {
+        const stressValue = mapStressToNumber(c.predictedStress);
+        map[dStr].values.push(stressValue);
+      }
     });
+
+    // Produce the final array
     return Object.values(map).map((entry) => ({
       dayLabel: entry.date.toLocaleDateString(undefined, { weekday: "short" }),
       avgStress: entry.values.length
-        ? +(entry.values.reduce((a, b) => a + b, 0) / entry.values.length).toFixed(2)
+        ? +(
+            entry.values.reduce((a, b) => a + b, 0) / entry.values.length
+          ).toFixed(2)
         : 0,
     }));
   }, [oneWeekFiltered]);
 
   // weekly sleep vs stress (scatter)
   // Weekly Sleep vs Stress (Scatter Chart)
- const weeklySleepStress = useMemo(() => {
+  const weeklySleepStress = useMemo(() => {
     return oneWeekFiltered
       .map((c) => {
         const sleepRaw = c.sLeepHours ?? c.sleepHours ?? c.sleep ?? 0;
@@ -278,7 +351,6 @@ export default function AnalyticsPage() {
       })
       .filter(Boolean) as { sleep: number; stress: number }[];
   }, [oneWeekFiltered]);
-
 
   // top 3 emotions (dynamic)
   const top3Emotions = useMemo(() => {
@@ -340,6 +412,11 @@ export default function AnalyticsPage() {
           </div>
 
           <nav className="space-y-2 mb-8">
+            <Link href="/">
+              <button className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-purple-100 hover:bg-white/10 transition-colors">
+                <span>Home</span>
+              </button>
+            </Link>
             <Link href="/Dashboard">
               <button className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-purple-100 hover:bg-white/10 transition-colors">
                 <span>Dashboard</span>
@@ -353,11 +430,6 @@ export default function AnalyticsPage() {
             <button className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl bg-white/20 text-white">
               <span>Analytics</span>
             </button>
-            <Link href="/">
-              <button className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-purple-100 hover:bg-white/10 transition-colors">
-                <span>Home</span>
-              </button>
-            </Link>
           </nav>
 
           <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4">
@@ -395,7 +467,9 @@ export default function AnalyticsPage() {
               <Sparkles className="w-8 h-8 text-white" />
             </div>
             <p className="text-white text-sm mb-2">Check your condition</p>
-            <p className="text-purple-200 text-xs mb-3">Track stress, activity & screen time</p>
+            <p className="text-purple-200 text-xs mb-3">
+              Track stress, activity & screen time
+            </p>
             <Button className="w-full bg-green-500 hover:bg-green-600 text-white">
               Check It Now
             </Button>
@@ -412,7 +486,9 @@ export default function AnalyticsPage() {
               <h1 className="text-2xl text-gray-900">
                 Hi, <span className="font-semibold">{user.name}</span> 👋
               </h1>
-              <p className="text-gray-600 text-sm mt-1">Welcome back — here's your analytics overview.</p>
+              <p className="text-gray-600 text-sm mt-1">
+                Welcome back — here's your analytics overview.
+              </p>
             </div>
             <div className="flex items-center space-x-4">
               <div className="relative">
@@ -441,12 +517,17 @@ export default function AnalyticsPage() {
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>
-                      <CardTitle className="text-gray-700 font-bold">Weekly Emotion Cloud</CardTitle>
+                      <CardTitle className="text-gray-700 font-bold">
+                        Weekly Emotion Cloud
+                      </CardTitle>
                       <CardDescription className="text-gray-500 mt-1">
-                        Anonymized — includes everyone's check-ins from the past 7 days. Top 3 are centered.
+                        Anonymized — includes everyone's check-ins from the past
+                        7 days. Top 3 are centered.
                       </CardDescription>
                     </div>
-                    <div className="text-sm text-gray-600">{oneWeekFiltered.length} check-ins</div>
+                    <div className="text-sm text-gray-600">
+                      {oneWeekFiltered.length} check-ins
+                    </div>
                   </div>
                 </CardHeader>
 
@@ -463,17 +544,34 @@ export default function AnalyticsPage() {
               {/* Emotion distribution */}
               <Card className="border-purple-100 shadow-lg">
                 <CardHeader>
-                  <CardTitle className="text-gray-700 font-bold">Weekly Emotion Distribution</CardTitle>
-                  <CardDescription className="text-gray-500 mt-1">Counts across all users (anonymized)</CardDescription>
+                  <CardTitle className="text-gray-700 font-bold">
+                    Weekly Emotion Distribution
+                  </CardTitle>
+                  <CardDescription className="text-gray-500 mt-1">
+                    Counts across all users (anonymized)
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={260}>
-                    <BarChart data={weeklyEmotionCounts} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                    <BarChart
+                      data={weeklyEmotionCounts}
+                      margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
+                    >
                       <CartesianGrid strokeDasharray="3 3" stroke="#F3E8FF" />
-                      <XAxis dataKey="emotion" tick={{ fill: "#6B7280", fontSize: 12 }} />
-                      <YAxis tick={{ fill: "#6B7280", fontSize: 12 }} allowDecimals={false} />
-                      <Tooltip />
-                      <Bar dataKey="count" fill="#7C3AED" radius={[6, 6, 0, 0]} />
+                      <XAxis
+                        dataKey="emotion"
+                        tick={{ fill: "#6B7280", fontSize: 12 }}
+                      />
+                      <YAxis
+                        tick={{ fill: "#6B7280", fontSize: 12 }}
+                        allowDecimals={false}
+                      />
+                      <Tooltip content={<EmotionDistributionTooltip />} />
+                      <Bar
+                        dataKey="count"
+                        fill="#7C3AED"
+                        radius={[6, 6, 0, 0]}
+                      />
                     </BarChart>
                   </ResponsiveContainer>
                 </CardContent>
@@ -482,18 +580,36 @@ export default function AnalyticsPage() {
               {/* Stress over time */}
               <Card className="border-purple-100 shadow-lg">
                 <CardHeader>
-                  <CardTitle className="text-gray-700 font-bold">Weekly Average Stress Levels</CardTitle>
-                  <CardDescription className="text-gray-500 mt-1">Average predicted stress per day (1=Low,2=Med,3=High)</CardDescription>
+                  <CardTitle className="text-gray-700 font-bold">
+                    Weekly Average Stress Levels
+                  </CardTitle>
+                  <CardDescription className="text-gray-500 mt-1">
+                    Average predicted stress per day (1=Low,2=Med,3=High)
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={260}>
                     <LineChart data={weeklyAvgStressByDay}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#F3E8FF" />
-                      <XAxis dataKey="dayLabel" tick={{ fill: "#6B7280", fontSize: 12 }} />
-                      <YAxis domain={[0, 3]} ticks={[0, 1, 2, 3]} tick={{ fill: "#6B7280", fontSize: 12 }} />
-                      <Tooltip />
+                      <XAxis
+                        dataKey="dayLabel"
+                        tick={{ fill: "#6B7280", fontSize: 12 }}
+                      />
+                      <YAxis
+                        domain={[0, 3]}
+                        ticks={[0, 1, 2, 3]}
+                        tick={{ fill: "#6B7280", fontSize: 12 }}
+                      />
+                      <Tooltip content={<WeeklyStressTooltip />} />
                       <Legend />
-                      <Line type="monotone" dataKey="avgStress" stroke="#0ea5e9" strokeWidth={3} dot={{ r: 4 }} />
+                      <Line
+                        type="monotone"
+                        dataKey="avgStress"
+                        name="Average Stress"
+                        stroke="#0ea5e9"
+                        strokeWidth={3}
+                        dot={{ r: 4 }}
+                      />
                     </LineChart>
                   </ResponsiveContainer>
                 </CardContent>
@@ -502,18 +618,40 @@ export default function AnalyticsPage() {
               {/* Sleep vs Stress */}
               <Card className="border-purple-100 shadow-lg">
                 <CardHeader>
-                  <CardTitle className="text-gray-700 font-bold">Weekly Sleep vs Stress</CardTitle>
-                  <CardDescription className="text-gray-500 mt-1">Each dot = one anonymized check-in</CardDescription>
+                  <CardTitle className="text-gray-700 font-bold">
+                    Weekly Sleep vs Stress
+                  </CardTitle>
+                  <CardDescription className="text-gray-500 mt-1">
+                    Each dot = one anonymized check-in
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={320}>
                     <ScatterChart>
                       <CartesianGrid strokeDasharray="3 3" stroke="#F3E8FF" />
-                      <XAxis type="number" dataKey="sleep" name="Sleep (hours)" unit="h" tick={{ fill: "#6B7280" }} />
-                      <YAxis type="number" dataKey="stress" name="Stress" tick={{ fill: "#6B7280" }} />
+                      <XAxis
+                        type="number"
+                        dataKey="sleep"
+                        name="Sleep (hours)"
+                        unit="h"
+                        tick={{ fill: "#6B7280" }}
+                      />
+                      <YAxis
+                        type="number"
+                        dataKey="stress"
+                        name="Stress"
+                        tick={{ fill: "#6B7280" }}
+                      />
                       <ZAxis range={[60, 400]} />
-                      <Tooltip cursor={{ strokeDasharray: "3 3" }} />
-                      <Scatter name="Users" data={weeklySleepStress} fill="#16a34a" />
+                      <Tooltip
+                        content={<SleepStressTooltip />}
+                        cursor={{ strokeDasharray: "3 3" }}
+                      />
+                      <Scatter
+                        name="Users"
+                        data={weeklySleepStress}
+                        fill="#16a34a"
+                      />
                     </ScatterChart>
                   </ResponsiveContainer>
                 </CardContent>
@@ -524,24 +662,37 @@ export default function AnalyticsPage() {
             <div className="space-y-6">
               <Card className="border-purple-100 shadow-lg text-gray-700">
                 <CardHeader>
-                  <CardTitle className="text-gray-700 font-bold">Overview</CardTitle>
-                  <CardDescription className="text-gray-500 mt-1">Quick insights (anonymous)</CardDescription>
+                  <CardTitle className="text-gray-700 font-bold">
+                    Overview
+                  </CardTitle>
+                  <CardDescription className="text-gray-500 mt-1">
+                    Quick insights (anonymous)
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-gray-500">Average stress (week)</p>
+                        <p className="text-sm text-gray-500">
+                          Average stress (week)
+                        </p>
                         <p className="text-2xl font-semibold text-gray-900">
                           {weeklyAvgStressByDay.length
-                            ? Math.round(weeklyAvgStressByDay.reduce((a, b) => a + b.avgStress, 0) / weeklyAvgStressByDay.length)
+                            ? Math.round(
+                                weeklyAvgStressByDay.reduce(
+                                  (a, b) => a + b.avgStress,
+                                  0
+                                ) / weeklyAvgStressByDay.length
+                              )
                             : "—"}
                           <span className="text-xs text-gray-500"> /3</span>
                         </p>
                       </div>
                       <div className="text-right">
                         <p className="text-sm text-gray-500">Check-ins</p>
-                        <p className="font-semibold text-gray-900">{oneWeekFiltered.length}</p>
+                        <p className="font-semibold text-gray-900">
+                          {oneWeekFiltered.length}
+                        </p>
                       </div>
                     </div>
 
@@ -551,14 +702,24 @@ export default function AnalyticsPage() {
                           <Sparkles className="w-5 h-5 text-blue-600" />
                         </div>
                         <div>
-                          <p className="font-medium text-gray-900">Community snapshot</p>
-                          <p className="text-sm text-gray-500">This shows anonymized check-ins from all active users.</p>
+                          <p className="font-medium text-gray-900">
+                            Community snapshot
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            This shows anonymized check-ins from all active
+                            users.
+                          </p>
                         </div>
                       </div>
                     </div>
 
                     <div>
-                      <Button onClick={() => router.push("/SurveyPage")} className="w-full bg-purple-600 text-white">Add today's check-in</Button>
+                      <Button
+                        onClick={() => router.push("/SurveyPage")}
+                        className="w-full bg-purple-600 text-white border-purple-200 hover:bg-black hover:text-white hover:shadow-xl hover:shadow-purple-600 hover:cursor-pointer transition-all"
+                      >
+                        Add today's check-in
+                      </Button>
                     </div>
                   </div>
                 </CardContent>
@@ -566,23 +727,39 @@ export default function AnalyticsPage() {
 
               <Card className="border-purple-100 shadow-lg">
                 <CardHeader>
-                  <CardTitle className="text-gray-700 font-bold">Tips</CardTitle>
-                  <CardDescription className="text-gray-500 mt-1">Quick actions to reduce stress</CardDescription>
+                  <CardTitle className="text-gray-700 font-bold">
+                    Tips
+                  </CardTitle>
+                  <CardDescription className="text-gray-500 mt-1">
+                    Quick actions to reduce stress
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <ul className="space-y-3">
                     <li className="flex items-start gap-3">
-                      <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600">1</div>
+                      <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600">
+                        1
+                      </div>
                       <div>
-                        <p className="font-bold text-gray-700">Short breathing exercise</p>
-                        <p className="text-sm text-gray-500">Try 4-4-4 breathing for 60 seconds.</p>
+                        <p className="font-bold text-gray-700">
+                          Short breathing exercise
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Try 4-4-4 breathing for 60 seconds.
+                        </p>
                       </div>
                     </li>
                     <li className="flex items-start gap-3">
-                      <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600">2</div>
+                      <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600">
+                        2
+                      </div>
                       <div>
-                        <p className="font-bold text-gray-700">Step away from screens</p>
-                        <p className="text-sm text-gray-500">Take a 10-minute walk to reset focus.</p>
+                        <p className="font-bold text-gray-700">
+                          Step away from screens
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Take a 10-minute walk to reset focus.
+                        </p>
                       </div>
                     </li>
                   </ul>
@@ -720,7 +897,9 @@ function CanvasEmotionCloud({
       });
 
       // dynamic center radius: ensure largest label fits
-      const maxLabelPx = Math.max(...state.items.map((it: any) => it.labelW || 40));
+      const maxLabelPx = Math.max(
+        ...state.items.map((it: any) => it.labelW || 40)
+      );
       const minDim = Math.min(W, H);
       const safeRadiusPx = Math.max(minDim * 0.28, maxLabelPx * 1.2);
       const ringFrac = Math.min(0.48, safeRadiusPx / minDim);
@@ -802,12 +981,17 @@ function CanvasEmotionCloud({
         const ax = dx * 8;
         const ay = dy * 8;
         // additional small force from mouse for interactivity
-        const mdx = (it.x * W) - mousePxX;
-        const mdy = (it.y * H) - mousePxY;
+        const mdx = it.x * W - mousePxX;
+        const mdy = it.y * H - mousePxY;
         const md = Math.sqrt(mdx * mdx + mdy * mdy) || 0.0001;
         const influence = Math.max(0, 1 - md / (Math.min(W, H) * 0.6));
         // near cursor -> repel a bit
-        const repel = (influence > 0.1) ? (md < 0.11 * Math.min(W, H) ? -0.12 * influence : 0.02 * influence) : 0;
+        const repel =
+          influence > 0.1
+            ? md < 0.11 * Math.min(W, H)
+              ? -0.12 * influence
+              : 0.02 * influence
+            : 0;
         const ux = mdx / md;
         const uy = mdy / md;
         const ax2 = ux * repel;
@@ -819,7 +1003,7 @@ function CanvasEmotionCloud({
         it.y += it.vy * dt;
 
         // clamp inside with margin so labels aren't clipped
-        const margin = (it.labelW || 40) / Math.min(W, H) * 0.6;
+        const margin = ((it.labelW || 40) / Math.min(W, H)) * 0.6;
         it.x = Math.max(0 + margin, Math.min(1 - margin, it.x));
         it.y = Math.max(0 + margin, Math.min(1 - margin, it.y));
       });
@@ -862,7 +1046,10 @@ function CanvasEmotionCloud({
           );
           let alpha = 0.06;
           if (state.mouse.inside) {
-            alpha = Math.max(0.06, 0.7 * (1 - dToCursor / (Math.min(W, H) * 0.6)));
+            alpha = Math.max(
+              0.06,
+              0.7 * (1 - dToCursor / (Math.min(W, H) * 0.6))
+            );
           }
           ctx.strokeStyle = `rgba(124,58,237,${alpha})`;
           ctx.stroke();
@@ -997,7 +1184,12 @@ function CanvasEmotionCloud({
   }, []);
 
   // tooltip DOM follow effect
-  const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number; visible: boolean }>({
+  const [tooltip, setTooltip] = useState<{
+    text: string;
+    x: number;
+    y: number;
+    visible: boolean;
+  }>({
     text: "",
     x: 0,
     y: 0,
@@ -1093,12 +1285,3 @@ function roundRect(
   ctx.arcTo(x, y, x + w, y, radius);
   ctx.closePath();
 }
-
-
-
-
-
-
-
-
-
