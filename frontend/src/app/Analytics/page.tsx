@@ -137,6 +137,59 @@ function getEmojiForEmotion(e: string) {
   }
 }
 
+const EmotionDistributionTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    const count = payload[0].value;
+    return (
+      <div className="bg-white border border-gray-300 p-2 rounded-lg shadow-md">
+        <p className="text-orange-600 font-semibold">{label}</p>
+        <p className="text-gray-800">
+          Count: <span className="font-medium">{count}</span>
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
+
+const WeeklyStressTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    const stressValue = payload[0].value;
+    const stressLabel =
+      stressValue <= 1 ? "Low" : stressValue <= 2 ? "Medium" : "High";
+    return (
+      <div className="bg-white border border-gray-300 p-2 rounded-lg shadow-md">
+        <p className="text-cyan-600 font-semibold">{label}</p>
+        <p className="text-gray-800">
+          Stress: <span className="font-medium">{stressLabel}</span>
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
+
+const SleepStressTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    const sleep = payload.find((p: any) => p.dataKey === "sleep")?.value;
+    const stress = payload.find((p: any) => p.dataKey === "stress")?.value;
+    const stressLabel = stress <= 1 ? "Low" : stress <= 2 ? "Medium" : "High";
+
+    return (
+      <div className="bg-white border border-gray-300 p-2 rounded-lg shadow-md">
+        <p className="text-green-600 font-semibold">Check-in</p>
+        <p className="text-gray-800">
+          Sleep: <span className="font-medium">{sleep}h</span>
+        </p>
+        <p className="text-gray-800">
+          Stress: <span className="font-medium">{stressLabel}</span>
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
+
 /* ---------------------------
    Page Component
    --------------------------- */
@@ -190,7 +243,9 @@ export default function AnalyticsPage() {
         const usersSnap = await getDocs(collection(db, "users"));
         const arr: Checkin[] = [];
         for (const udoc of usersSnap.docs) {
-          const snap = await getDocs(collection(db, "users", udoc.id, "checkins"));
+          const snap = await getDocs(
+            collection(db, "users", udoc.id, "checkins")
+          );
           snap.forEach((d) => {
             const data = d.data();
             // unify createdAt into JS Date if firestore Timestamp
@@ -230,66 +285,62 @@ export default function AnalyticsPage() {
   }, [allCheckins]);
 
   // weekly emotion counts (for bar)
- const weeklyEmotionCounts = useMemo(() => {
-  const counts: Record<string, number> = {};
-  EMOTIONS.forEach((e) => (counts[e] = 0));
+  const weeklyEmotionCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    EMOTIONS.forEach((e) => (counts[e] = 0));
 
-  oneWeekFiltered.forEach((c) => {
-    const e = c.detectedEmotion ?? c.detected_emotion ?? c.predictedEmotion;
-    if (e && counts[e] !== undefined) counts[e]++;
-  });
+    oneWeekFiltered.forEach((c) => {
+      const e = c.detectedEmotion ?? c.detected_emotion ?? c.predictedEmotion;
+      if (e && counts[e] !== undefined) counts[e]++;
+    });
 
-  // Build sorted list
-  const sorted = EMOTIONS
-    .map((e) => ({ emotion: e, count: counts[e] }))
-    .sort((a, b) => b.count - a.count);
+    // Build sorted list
+    const sorted = EMOTIONS.map((e) => ({ emotion: e, count: counts[e] })).sort(
+      (a, b) => b.count - a.count
+    );
 
-  // If too many labels, only return top 10
-  return sorted.slice(0, 10);
-}, [oneWeekFiltered]);
+    // If too many labels, only return top 10
+    return sorted.slice(0, 10);
+  }, [oneWeekFiltered]);
 
+  const weeklyAvgStressByDay = useMemo(() => {
+    const map: Record<string, { date: Date; values: number[] }> = {};
+    const now = new Date();
 
-
-const weeklyAvgStressByDay = useMemo(() => {
-  const map: Record<string, { date: Date; values: number[] }> = {};
-  const now = new Date();
-
-  // Build map for the last 7 days (LOCAL, not UTC)
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
-    const key = d.toLocaleDateString("en-CA"); // YYYY-MM-DD (local)
-    map[key] = { date: d, values: [] };
-  }
-
-  // Loop through checkins
-  oneWeekFiltered.forEach((c) => {
-    const createdLocal = toDate(c.createdAt);
-
-    // ALSO USE LOCAL DATE (fixes the missing updates)
-    const dStr = createdLocal.toLocaleDateString("en-CA");
-
-    if (map[dStr]) {
-      // Keep your stress mapping EXACTLY as you want (1–3)
-      const stressValue = mapStressToNumber(c.predictedStress);
-      map[dStr].values.push(stressValue);
+    // Build map for the last 7 days (LOCAL, not UTC)
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+      const key = d.toLocaleDateString("en-US"); // YYYY-MM-DD (local)
+      map[key] = { date: d, values: [] };
     }
-  });
 
-  // Produce the final array
-  return Object.values(map).map((entry) => ({
-    dayLabel: entry.date.toLocaleDateString(undefined, { weekday: "short" }),
-    avgStress:
-      entry.values.length
-        ? +(entry.values.reduce((a, b) => a + b, 0) / entry.values.length).toFixed(2)
+    // Loop through checkins
+    oneWeekFiltered.forEach((c) => {
+      const createdLocal = toDate(c.createdAt);
+
+      // ALSO USE LOCAL DATE (fixes the missing updates)
+      const dStr = createdLocal.toLocaleDateString("en-US");
+
+      if (map[dStr]) {
+        const stressValue = mapStressToNumber(c.predictedStress);
+        map[dStr].values.push(stressValue);
+      }
+    });
+
+    // Produce the final array
+    return Object.values(map).map((entry) => ({
+      dayLabel: entry.date.toLocaleDateString(undefined, { weekday: "short" }),
+      avgStress: entry.values.length
+        ? +(
+            entry.values.reduce((a, b) => a + b, 0) / entry.values.length
+          ).toFixed(2)
         : 0,
-  }));
-}, [oneWeekFiltered]);
-
-
+    }));
+  }, [oneWeekFiltered]);
 
   // weekly sleep vs stress (scatter)
   // Weekly Sleep vs Stress (Scatter Chart)
- const weeklySleepStress = useMemo(() => {
+  const weeklySleepStress = useMemo(() => {
     return oneWeekFiltered
       .map((c) => {
         const sleepRaw = c.sLeepHours ?? c.sleepHours ?? c.sleep ?? 0;
@@ -300,7 +351,6 @@ const weeklyAvgStressByDay = useMemo(() => {
       })
       .filter(Boolean) as { sleep: number; stress: number }[];
   }, [oneWeekFiltered]);
-
 
   // top 3 emotions (dynamic)
   const top3Emotions = useMemo(() => {
@@ -380,7 +430,6 @@ const weeklyAvgStressByDay = useMemo(() => {
             <button className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl bg-white/20 text-white">
               <span>Analytics</span>
             </button>
-            
           </nav>
 
           <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4">
@@ -517,7 +566,7 @@ const weeklyAvgStressByDay = useMemo(() => {
                         tick={{ fill: "#6B7280", fontSize: 12 }}
                         allowDecimals={false}
                       />
-                      <Tooltip />
+                      <Tooltip content={<EmotionDistributionTooltip />} />
                       <Bar
                         dataKey="count"
                         fill="#7C3AED"
@@ -551,11 +600,12 @@ const weeklyAvgStressByDay = useMemo(() => {
                         ticks={[0, 1, 2, 3]}
                         tick={{ fill: "#6B7280", fontSize: 12 }}
                       />
-                      <Tooltip />
+                      <Tooltip content={<WeeklyStressTooltip />} />
                       <Legend />
                       <Line
                         type="monotone"
                         dataKey="avgStress"
+                        name="Average Stress"
                         stroke="#0ea5e9"
                         strokeWidth={3}
                         dot={{ r: 4 }}
@@ -593,7 +643,10 @@ const weeklyAvgStressByDay = useMemo(() => {
                         tick={{ fill: "#6B7280" }}
                       />
                       <ZAxis range={[60, 400]} />
-                      <Tooltip cursor={{ strokeDasharray: "3 3" }} />
+                      <Tooltip
+                        content={<SleepStressTooltip />}
+                        cursor={{ strokeDasharray: "3 3" }}
+                      />
                       <Scatter
                         name="Users"
                         data={weeklySleepStress}
@@ -844,7 +897,9 @@ function CanvasEmotionCloud({
       });
 
       // dynamic center radius: ensure largest label fits
-      const maxLabelPx = Math.max(...state.items.map((it: any) => it.labelW || 40));
+      const maxLabelPx = Math.max(
+        ...state.items.map((it: any) => it.labelW || 40)
+      );
       const minDim = Math.min(W, H);
       const safeRadiusPx = Math.max(minDim * 0.28, maxLabelPx * 1.2);
       const ringFrac = Math.min(0.48, safeRadiusPx / minDim);
@@ -926,12 +981,17 @@ function CanvasEmotionCloud({
         const ax = dx * 8;
         const ay = dy * 8;
         // additional small force from mouse for interactivity
-        const mdx = (it.x * W) - mousePxX;
-        const mdy = (it.y * H) - mousePxY;
+        const mdx = it.x * W - mousePxX;
+        const mdy = it.y * H - mousePxY;
         const md = Math.sqrt(mdx * mdx + mdy * mdy) || 0.0001;
         const influence = Math.max(0, 1 - md / (Math.min(W, H) * 0.6));
         // near cursor -> repel a bit
-        const repel = (influence > 0.1) ? (md < 0.11 * Math.min(W, H) ? -0.12 * influence : 0.02 * influence) : 0;
+        const repel =
+          influence > 0.1
+            ? md < 0.11 * Math.min(W, H)
+              ? -0.12 * influence
+              : 0.02 * influence
+            : 0;
         const ux = mdx / md;
         const uy = mdy / md;
         const ax2 = ux * repel;
@@ -943,7 +1003,7 @@ function CanvasEmotionCloud({
         it.y += it.vy * dt;
 
         // clamp inside with margin so labels aren't clipped
-        const margin = (it.labelW || 40) / Math.min(W, H) * 0.6;
+        const margin = ((it.labelW || 40) / Math.min(W, H)) * 0.6;
         it.x = Math.max(0 + margin, Math.min(1 - margin, it.x));
         it.y = Math.max(0 + margin, Math.min(1 - margin, it.y));
       });
@@ -986,7 +1046,10 @@ function CanvasEmotionCloud({
           );
           let alpha = 0.06;
           if (state.mouse.inside) {
-            alpha = Math.max(0.06, 0.7 * (1 - dToCursor / (Math.min(W, H) * 0.6)));
+            alpha = Math.max(
+              0.06,
+              0.7 * (1 - dToCursor / (Math.min(W, H) * 0.6))
+            );
           }
           ctx.strokeStyle = `rgba(124,58,237,${alpha})`;
           ctx.stroke();
@@ -1121,7 +1184,12 @@ function CanvasEmotionCloud({
   }, []);
 
   // tooltip DOM follow effect
-  const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number; visible: boolean }>({
+  const [tooltip, setTooltip] = useState<{
+    text: string;
+    x: number;
+    y: number;
+    visible: boolean;
+  }>({
     text: "",
     x: 0,
     y: 0,
@@ -1217,12 +1285,3 @@ function roundRect(
   ctx.arcTo(x, y, x + w, y, radius);
   ctx.closePath();
 }
-
-
-
-
-
-
-
-
-
