@@ -735,7 +735,7 @@ export default function DashboardPage() {
                       Physical activity (recent)
                     </CardTitle>
                     <CardDescription className="text-gray-500 mt-1">
-                      Minutes/hours recorded per day
+                      Hours recorded per day
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
