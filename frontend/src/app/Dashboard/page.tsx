@@ -96,6 +96,36 @@ const MoodTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
+const PhysicalActivityTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    const hours = payload[0].value;
+    return (
+      <div className="bg-white border border-gray-300 p-2 rounded-lg shadow-md">
+        <p className="text-blue-600 font-semibold">{label}</p>
+        <p className="text-gray-800">
+          Hours: <span className="font-medium">{hours}</span>
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
+
+const ScreenTimeTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    const hours = payload[0].value;
+    return (
+      <div className="bg-white border border-gray-300 p-2 rounded-lg shadow-md">
+        <p className="text-purple-600 font-semibold">{label}</p>
+        <p className="text-gray-800">
+          Hours: <span className="font-medium">{hours}</span>
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
+
 type Checkin = {
   sleepHours?: number | string;
   caffeineCups?: number | string;
@@ -505,7 +535,7 @@ export default function DashboardPage() {
               <Heart className="w-6 h-6 text-white" />
             </div>
             <Link href="/">
-            <span className="text-white text-xl">MindSight</span>
+              <span className="text-white text-xl">MindSight</span>
             </Link>
           </div>
 
@@ -524,11 +554,10 @@ export default function DashboardPage() {
               </button>
             </Link>
             <Link href="/Analytics">
-            <button className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-purple-100 hover:bg-white/10 transition-colors">
-              <span>Analytics</span>
-            </button>
+              <button className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-purple-100 hover:bg-white/10 transition-colors">
+                <span>Analytics</span>
+              </button>
             </Link>
-            
           </nav>
 
           <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4">
@@ -644,7 +673,7 @@ export default function DashboardPage() {
                           domain={[0, 10]}
                           tick={{ fill: "#6B7280", fontSize: 12 }}
                         />
-                        <Tooltip />
+                        <Tooltip content={<CustomTooltip />} />
                         <Line
                           type="monotone"
                           dataKey="stress"
@@ -752,7 +781,7 @@ export default function DashboardPage() {
                             tick={{ fill: "#6B7280", fontSize: 12 }}
                           />
                           <YAxis tick={{ fill: "#6B7280", fontSize: 12 }} />
-                          <Tooltip />
+                          <Tooltip content={<PhysicalActivityTooltip />} />
                           <Bar
                             dataKey="physical"
                             fill="#60A5FA"
@@ -793,7 +822,7 @@ export default function DashboardPage() {
                             tick={{ fill: "#6B7280", fontSize: 12 }}
                           />
                           <YAxis tick={{ fill: "#6B7280", fontSize: 12 }} />
-                          <Tooltip />
+                          <Tooltip content={<ScreenTimeTooltip />} />
                           <Bar
                             dataKey="screen"
                             fill="#C084FC"
