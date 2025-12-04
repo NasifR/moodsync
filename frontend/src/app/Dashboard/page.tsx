@@ -53,15 +53,14 @@ import {
   PieChart,
   Pie,
   Cell,
-} from "recharts"
+} from "recharts";
 
 import EmotionWheel from "@/components/EmotionWheel";
 import EmotionTimeline from "@/components/EmotionTimeline";
 import DominantEmotionCard from "@/components/DominantEmotionCard";
 import TodayEmotionCard from "@/components/TodayEmotionCard";
 
-
-const CustomTooltip = ({ active, payload, label }) => {
+const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     const stressValue = payload[0].value;
     const stressLabel =
@@ -69,9 +68,57 @@ const CustomTooltip = ({ active, payload, label }) => {
 
     return (
       <div className="bg-white border border-gray-300 p-2 rounded-lg shadow-md">
-        <p className="text-purple-600 font-semibold">{label}</p> {/* date */}
+        <p className="text-purple-600 font-semibold">{label}</p>
         <p className="text-gray-800">
           Stress: <span className="font-medium">{stressLabel}</span>
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
+
+const MoodTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    const moodValue = payload[0].value;
+    const moodLabel =
+      moodValue <= 3 ? "Negative" : moodValue <= 7 ? "Neutral" : "Positive";
+
+    return (
+      <div className="bg-white border border-gray-300 p-2 rounded-lg shadow-md">
+        <p className="text-green-600 font-semibold">{label}</p>
+        <p className="text-gray-800">
+          Mood: <span className="font-medium">{moodLabel}</span>
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
+
+const PhysicalActivityTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    const hours = payload[0].value;
+    return (
+      <div className="bg-white border border-gray-300 p-2 rounded-lg shadow-md">
+        <p className="text-blue-600 font-semibold">{label}</p>
+        <p className="text-gray-800">
+          Hours: <span className="font-medium">{hours}</span>
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
+
+const ScreenTimeTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    const hours = payload[0].value;
+    return (
+      <div className="bg-white border border-gray-300 p-2 rounded-lg shadow-md">
+        <p className="text-purple-600 font-semibold">{label}</p>
+        <p className="text-gray-800">
+          Hours: <span className="font-medium">{hours}</span>
         </p>
       </div>
     );
@@ -92,11 +139,6 @@ type Checkin = {
   // any other fields
   [key: string]: any;
 };
-
-interface DashboardPageProps {
-  user?: { id: string; email?: string; name?: string } | null;
-  onLogout?: () => void;
-}
 
 function toDate(x: any): Date {
   // Handle Firestore Timestamp, number/ms, or Date
@@ -128,12 +170,28 @@ function formatShortDate(d: Date) {
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
-export default function DashboardPage({
-  user: userProp,
-  onLogout,
-}: DashboardPageProps) {
+function getMoodLabel(moodScore: number | string | undefined): string {
+  if (moodScore === null || moodScore === undefined) return "Unknown";
+  const score =
+    typeof moodScore === "string" ? parseFloat(moodScore) : moodScore;
+  if (isNaN(score)) return "Unknown";
+
+  if (score >= 0.2) return "Positive";
+  if (score <= -0.2) return "Negative";
+  return "Neutral";
+}
+
+function mapMoodToNumber(moodScore: number | string | undefined): number {
+  if (moodScore === null || moodScore === undefined) return 0;
+  const score =
+    typeof moodScore === "string" ? parseFloat(moodScore) : moodScore;
+  if (isNaN(score)) return 0;
+  return Math.round((score + 1) * 5);
+}
+
+export default function DashboardPage() {
   const router = useRouter();
-  const [user, setUser] = useState<any | null>(userProp ?? null);
+  const [user, setUser] = useState<any | null>(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
 
   // check auth and redirect if not logged in
@@ -215,26 +273,25 @@ export default function DashboardPage({
   }, [user]);
 
   // today's emotion
-function isToday(date: Date) {
-  const today = new Date();
-  return (
-    date.getDate() === today.getDate() &&
-    date.getMonth() === today.getMonth() &&
-    date.getFullYear() === today.getFullYear()
-  );
-}
-
-let todayEmotion: string | null = null;
-
-if (checkins.length > 0) {
-  const latest = checkins[0];
-  const d = toDate(latest.createdAt);
-
-  if (isToday(d)) {
-    todayEmotion = latest.detectedEmotion ?? null;
+  function isToday(date: Date) {
+    const today = new Date();
+    return (
+      date.getDate() === today.getDate() &&
+      date.getMonth() === today.getMonth() &&
+      date.getFullYear() === today.getFullYear()
+    );
   }
-}
 
+  let todayEmotion: string | null = null;
+
+  if (checkins.length > 0) {
+    const latest = checkins[0];
+    const d = toDate(latest.createdAt);
+
+    if (isToday(d)) {
+      todayEmotion = latest.detectedEmotion ?? null;
+    }
+  }
 
   // derive last 7 days aggregated series (or available days)
   const last7Series = useMemo(() => {
@@ -249,6 +306,7 @@ if (checkins.length > 0) {
         stressVals: number[];
         physical: number[];
         screen: number[];
+        moodVals: number[];
         raw: Checkin[];
       }
     > = {};
@@ -260,6 +318,7 @@ if (checkins.length > 0) {
           stressVals: [],
           physical: [],
           screen: [],
+          moodVals: [],
           raw: [],
         };
       group[dStr].raw.push(entry);
@@ -268,11 +327,18 @@ if (checkins.length > 0) {
         group[dStr].physical.push(Number(entry.physicalActivity) || 0);
       if (entry.screenTime !== undefined)
         group[dStr].screen.push(Number(entry.screenTime) || 0);
+      if (entry.moodScore !== undefined)
+        group[dStr].moodVals.push(mapMoodToNumber(entry.moodScore));
     };
 
     checkins.forEach((c) => {
       const d = toDate(c.createdAt);
-      const dStr = d.toISOString().slice(0, 10);
+      const dStr =
+        d.getFullYear() +
+        "-" +
+        String(d.getMonth() + 1).padStart(2, "0") +
+        "-" +
+        String(d.getDate()).padStart(2, "0");
       pushEntry(dStr, d, c);
     });
 
@@ -293,10 +359,16 @@ if (checkins.length > 0) {
           const d = toDate(c.createdAt);
           return {
             dateLabel: formatShortDate(d),
-            dateIso: d.toISOString().slice(0, 10),
+            dateIso:
+              d.getFullYear() +
+              "-" +
+              String(d.getMonth() + 1).padStart(2, "0") +
+              "-" +
+              String(d.getDate()).padStart(2, "0"),
             stress: mapStressToNumber(c.predictedStress),
             physical: Number(c.physicalActivity) || 0,
             screen: Number(c.screenTime) || 0,
+            mood: mapMoodToNumber(c.moodScore),
           };
         });
     }
@@ -309,12 +381,21 @@ if (checkins.length > 0) {
         : 0;
       const sumPhysical = u.physical.reduce((a, b) => a + b, 0);
       const sumScreen = u.screen.reduce((a, b) => a + b, 0);
+      const avgMood = u.moodVals.length
+        ? Math.round(u.moodVals.reduce((a, b) => a + b, 0) / u.moodVals.length)
+        : 0;
       return {
         dateLabel: formatShortDate(u.date),
-        dateIso: u.date.toISOString().slice(0, 10),
+        dateIso:
+          u.date.getFullYear() +
+          "-" +
+          String(u.date.getMonth() + 1).padStart(2, "0") +
+          "-" +
+          String(u.date.getDate()).padStart(2, "0"),
         stress: avgStress,
         physical: Math.round(sumPhysical),
         screen: Math.round(sumScreen),
+        mood: avgMood,
       };
     });
   }, [checkins]);
@@ -341,7 +422,14 @@ if (checkins.length > 0) {
   const emotionCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     checkins.forEach((c) => {
-      const e = (c.detectedEmotion ?? c.detected_emotion ?? c.predictedEmotion ?? "").toString().trim();
+      const e = (
+        c.detectedEmotion ??
+        c.detected_emotion ??
+        c.predictedEmotion ??
+        ""
+      )
+        .toString()
+        .trim();
       if (!e) return;
       counts[e] = (counts[e] || 0) + 1;
     });
@@ -363,12 +451,21 @@ if (checkins.length > 0) {
   // timeline: use the most recent up to 12 checkins, oldest first
   const emotionTimeline = useMemo(() => {
     const items = checkins
+      .filter((c) => {
+        const emotion =
+          c.detectedEmotion ?? c.detected_emotion ?? c.predictedEmotion ?? "";
+        return emotion && emotion.toString().trim() !== "";
+      })
       .slice(0, 12)
       .map((c) => {
         const d = toDate(c.createdAt);
         return {
           dateLabel: formatShortDate(d),
-          emotion: c.detectedEmotion ?? c.detected_emotion ?? c.predictedEmotion ?? "Unknown",
+          emotion:
+            c.detectedEmotion ??
+            c.detected_emotion ??
+            c.predictedEmotion ??
+            "Unknown",
           emoji: (() => {
             const map: Record<string, string> = {
               Sadness: "😢",
@@ -385,13 +482,22 @@ if (checkins.length > 0) {
               Desire: "🔥",
               Sarcasm: "😏",
             };
-            return map[(c.detectedEmotion ?? c.detected_emotion ?? c.predictedEmotion ?? "").toString()] ?? "❓";
+            return (
+              map[
+                (
+                  c.detectedEmotion ??
+                  c.detected_emotion ??
+                  c.predictedEmotion ??
+                  ""
+                ).toString()
+              ] ?? "❓"
+            );
           })(),
           ts: toDate(c.createdAt).getTime(),
         };
       })
-      .sort((a, b) => a.ts - b.ts) // oldest first
-      .map(({ts, ...rest}) => rest);
+      .sort((a, b) => a.ts - b.ts)
+      .map(({ ts, ...rest }) => rest);
     return items;
   }, [checkins]);
 
@@ -428,10 +534,17 @@ if (checkins.length > 0) {
             <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
               <Heart className="w-6 h-6 text-white" />
             </div>
-            <span className="text-white text-xl">MindSight</span>
+            <Link href="/">
+              <span className="text-white text-xl">MindSight</span>
+            </Link>
           </div>
 
           <nav className="space-y-2 mb-8">
+            <Link href="/">
+              <button className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-purple-100 hover:bg-white/10 transition-colors">
+                <span>Home</span>
+              </button>
+            </Link>
             <button className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl bg-white/20 text-white backdrop-blur-sm">
               <span>Dashboard</span>
             </button>
@@ -440,12 +553,9 @@ if (checkins.length > 0) {
                 <span>Survey</span>
               </button>
             </Link>
-            <button className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-purple-100 hover:bg-white/10 transition-colors">
-              <span>Analytics</span>
-            </button>
-            <Link href="/">
+            <Link href="/Analytics">
               <button className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-purple-100 hover:bg-white/10 transition-colors">
-                <span>Home</span>
+                <span>Analytics</span>
               </button>
             </Link>
           </nav>
@@ -583,6 +693,68 @@ if (checkins.length > 0) {
                 </CardContent>
               </Card>
 
+              {/* Mood last 7 days */}
+              <Card className="border-purple-100 shadow-lg">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-gray-700 font-bold">
+                        Last week's mood
+                      </CardTitle>
+                      <CardDescription className="text-gray-500 mt-1">
+                        Sentiment analysis from your journal entries
+                      </CardDescription>
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      {last7Series.filter((s) => s.mood > 0).length
+                        ? `${last7Series.filter((s) => s.mood > 0).length} days`
+                        : "No data"}
+                    </div>
+                  </div>
+                </CardHeader>
+
+                <CardContent>
+                  {last7Series.filter((s) => s.mood > 0).length ? (
+                    <ResponsiveContainer width="100%" height={280}>
+                      <LineChart
+                        data={last7Series.filter((s) => s.mood > 0)}
+                        margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke="#F3E8FF" />
+                        <XAxis
+                          dataKey="dateLabel"
+                          tick={{ fill: "#6B7280", fontSize: 12 }}
+                        />
+                        <YAxis
+                          domain={[0, 10]}
+                          ticks={[2, 5, 8]}
+                          tickFormatter={(value) => {
+                            if (value <= 3) return "Negative";
+                            if (value <= 7) return "Neutral";
+                            return "Positive";
+                          }}
+                          tick={{ fill: "#6B7280", fontSize: 12 }}
+                        />
+                        <Tooltip content={<MoodTooltip />} />
+                        <Line
+                          type="monotone"
+                          dataKey="mood"
+                          stroke="#10B981"
+                          strokeWidth={3}
+                          dot={{ r: 4 }}
+                          animationDuration={800}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="py-8 text-center text-gray-500">
+                      No mood data available. Add journal entries to your
+                      check-ins to see mood analysis here.
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
               {/* Multi metrics row */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Physical activity */}
@@ -592,7 +764,7 @@ if (checkins.length > 0) {
                       Physical activity (recent)
                     </CardTitle>
                     <CardDescription className="text-gray-500 mt-1">
-                      Minutes/hours recorded per day
+                      Hours recorded per day
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -609,7 +781,7 @@ if (checkins.length > 0) {
                             tick={{ fill: "#6B7280", fontSize: 12 }}
                           />
                           <YAxis tick={{ fill: "#6B7280", fontSize: 12 }} />
-                          <Tooltip />
+                          <Tooltip content={<PhysicalActivityTooltip />} />
                           <Bar
                             dataKey="physical"
                             fill="#60A5FA"
@@ -650,7 +822,7 @@ if (checkins.length > 0) {
                             tick={{ fill: "#6B7280", fontSize: 12 }}
                           />
                           <YAxis tick={{ fill: "#6B7280", fontSize: 12 }} />
-                          <Tooltip />
+                          <Tooltip content={<ScreenTimeTooltip />} />
                           <Bar
                             dataKey="screen"
                             fill="#C084FC"
@@ -672,18 +844,16 @@ if (checkins.length > 0) {
                 <DominantEmotionCard
                   dominant={dominantEmotion}
                   total={totalEmotionEntries}
-                  className="h-full"
                 />
 
-                <TodayEmotionCard emotion={todayEmotion} className="h-full" />
+                <TodayEmotionCard emotion={todayEmotion} />
+              </div>
 
-            </div>
-
-            {/* --- Full-width Emotion Timeline (wider + nicer) --- */}
-            <div className="mt-8">
-              <EmotionTimeline timeline={emotionTimeline} />
-            </div>
-            {/*end of Emotion Timeline*/}
+              {/* --- Full-width Emotion Timeline (wider + nicer) --- */}
+              <div className="mt-8">
+                <EmotionTimeline timeline={emotionTimeline} />
+              </div>
+              {/*end of Emotion Timeline*/}
 
               {/* Recent list / activity */}
               <Card className="border-purple-100 shadow-lg">
@@ -742,7 +912,7 @@ if (checkins.length > 0) {
                                         (c.dayDescription.length > 80
                                           ? "…"
                                           : "")
-                                      : "No description"}
+                                      : ""}
                                   </p>
                                 </div>
                               </div>
@@ -755,6 +925,17 @@ if (checkins.length > 0) {
                               <div className="font-semibold text-gray-900">
                                 {displayStressLabel(c.predictedStress)}
                               </div>
+                              {c.moodScore !== null &&
+                                c.moodScore !== undefined && (
+                                  <>
+                                    <div className="text-sm text-gray-500 mt-2 mb-1">
+                                      Mood
+                                    </div>
+                                    <div className="font-semibold text-gray-900">
+                                      {getMoodLabel(c.moodScore)}
+                                    </div>
+                                  </>
+                                )}
                               <div className="text-xs text-gray-400 mt-1">
                                 {toDate(c.createdAt).toLocaleString()}
                               </div>
@@ -823,7 +1004,7 @@ if (checkins.length > 0) {
                     <div>
                       <Button
                         onClick={() => router.push("/SurveyPage")}
-                        className="w-full bg-purple-600 border text-white border-purple-200 hover:bg-black hover:text-white hover:shadow-2xl hover:shadow-purple-600bg-purple-600 hover:cursor-pointer hover:shadow-purple-600 transition-all"
+                        className="w-full bg-purple-600 text-white border-purple-200 hover:bg-black hover:text-white hover:shadow-xl hover:shadow-purple-600 hover:cursor-pointer transition-all"
                       >
                         Add today's check-in
                       </Button>
@@ -877,7 +1058,6 @@ if (checkins.length > 0) {
                 <EmotionWheel
                   counts={emotionCounts}
                   total={totalEmotionEntries || 0}
-                  className="h-full"
                 />
               </div>
             </div>

@@ -185,8 +185,6 @@ export default function LandingPage() {
   hover:text-white
   hover:shadow-xl hover:shadow-purple-600
 "
-
-
                   >
                     Start Your Journey
                     <Sparkles className="w-5 h-5 ml-2" />
@@ -415,6 +413,7 @@ export default function LandingPage() {
         </motion.section>
 
         <motion.section
+          id="mission-vision"
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true, amount: 0.3 }}

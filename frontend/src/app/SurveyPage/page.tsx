@@ -8,6 +8,10 @@ import {
   collection,
   addDoc,
   serverTimestamp,
+  query,
+  orderBy,
+  limit,
+  getDocs,
 } from "firebase/firestore";
 import { auth, db } from "../../../lib/firebaseConfig";
 import { Button } from "@/components/ui/button";
@@ -35,11 +39,51 @@ export default function SurveyPage() {
   const [predictedStress, setPredictedStress] = useState("");
   const [emotion, setEmotion] = useState("");
   const [emoji, setEmoji] = useState("");
+  const [moodScore, setMoodScore] = useState<number | undefined>(undefined);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasCheckedInToday, setHasCheckedInToday] = useState(false);
+  const [checkingStatus, setCheckingStatus] = useState(true);
 
-  // Redirect if not logged in
+  const isToday = (date: Date) => {
+    const today = new Date();
+    return (
+      date.getDate() === today.getDate() &&
+      date.getMonth() === today.getMonth() &&
+      date.getFullYear() === today.getFullYear()
+    );
+  };
+
+  const checkTodayCheckin = async (userId: string) => {
+    try {
+      const colRef = collection(db, "users", userId, "checkins");
+      const q = query(colRef, orderBy("createdAt", "desc"), limit(1));
+      const snapshot = await getDocs(q);
+
+      if (!snapshot.empty) {
+        const latestCheckin = snapshot.docs[0].data();
+        const createdAt = latestCheckin.createdAt;
+
+        if (createdAt && createdAt.toDate) {
+          const checkinDate = createdAt.toDate();
+          if (isToday(checkinDate)) {
+            setHasCheckedInToday(true);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error checking today's check-in:", error);
+    } finally {
+      setCheckingStatus(false);
+    }
+  };
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (!user) router.push("/SignUp");
+      if (!user) {
+        router.push("/SignUp");
+      } else {
+        checkTodayCheckin(user.uid);
+      }
     });
     return () => unsubscribe();
   }, [router]);
@@ -62,7 +106,6 @@ export default function SurveyPage() {
     }));
   };
 
-  // SUBMIT LOGIC (same as your old one, just added Emotion API)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -72,6 +115,20 @@ export default function SurveyPage() {
       router.push("/SignUp");
       return;
     }
+
+    const hasJournalEntry =
+      formData.dayDescription && formData.dayDescription.trim();
+
+    if (!hasJournalEntry) {
+      const confirmed = window.confirm(
+        "You haven't provided a journal entry. Your emotion and mood will not be analyzed. Are you sure you want to submit this check-in?"
+      );
+      if (!confirmed) {
+        return;
+      }
+    }
+
+    setIsSubmitting(true);
 
     try {
       // Prepare stress input
@@ -98,24 +155,44 @@ export default function SurveyPage() {
       const stressData = await stressResp.json();
       const detectedStress = stressData.predicted_stress_level;
 
-      // 2️⃣ CALL EMOTION BACKEND
-      const emotionResp = await fetch(`${API_URL}/analyze-emotion`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: formData.dayDescription }),
-      });
+      let detectedEmotion = null;
+      let detectedEmoji = "";
+      let moodScore = null;
 
-      if (!emotionResp.ok) throw new Error("Emotion API failed");
+      // only run nlp analysis if there is text input
+      if (formData.dayDescription && formData.dayDescription.trim()) {
+        // call emotion analysis
+        const emotionResp = await fetch(`${API_URL}/analyze-emotion`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: formData.dayDescription }),
+        });
 
-      const emotionData = await emotionResp.json();
-      const detectedEmotion = emotionData.emotion;
-      const detectedEmoji = emotionData.emoji;
+        if (!emotionResp.ok) throw new Error("Emotion API failed");
+
+        const emotionData = await emotionResp.json();
+        detectedEmotion = emotionData.emotion;
+        detectedEmoji = emotionData.emoji;
+
+        // call sentiment analysis
+        const sentimentResp = await fetch(`${API_URL}/analyze-sentiment`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: formData.dayDescription }),
+        });
+
+        if (!sentimentResp.ok) throw new Error("Sentiment API failed");
+
+        const sentimentData = await sentimentResp.json();
+        moodScore = sentimentData.valence;
+      }
 
       // Store in Firestore
       await addDoc(collection(db, "users", user.uid, "checkins"), {
         ...formData,
         predictedStress: detectedStress,
         detectedEmotion,
+        moodScore,
         createdAt: serverTimestamp(),
       });
 
@@ -123,6 +200,7 @@ export default function SurveyPage() {
       setPredictedStress(detectedStress);
       setEmotion(detectedEmotion);
       setEmoji(detectedEmoji);
+      setMoodScore(moodScore);
 
       // Show modal
       setModalOpen(true);
@@ -140,6 +218,8 @@ export default function SurveyPage() {
     } catch (error) {
       console.error("Error submitting survey:", error);
       alert("Failed to submit survey. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -153,174 +233,221 @@ export default function SurveyPage() {
         stressLevel={predictedStress}
         emotion={emotion}
         emoji={emoji}
+        moodScore={moodScore}
       />
 
-      <div className="max-w-4xl mx-auto px-6 py-12">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 mt-10">
-            Daily Check-In
-          </h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Help us understand your day better by sharing a few details about
-            your activities and feelings.
-          </p>
+      {checkingStatus ? (
+        <div className="max-w-4xl mx-auto px-6 py-12">
+          <div className="text-center py-20">
+            <div className="animate-pulse mb-4">
+              <div className="w-16 h-16 rounded-full bg-purple-200 mx-auto"></div>
+            </div>
+            <p className="text-gray-600">Loading...</p>
+          </div>
         </div>
-
-        <Card className="p-8 md:p-10 shadow-2xl border-purple-200">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="sleepHours" className="text-gray-700 text-base">
-                How many hours did you sleep last night?
-              </Label>
-              <Input
-                id="sleepHours"
-                type="text"
-                inputMode="decimal"
-                value={formData.sleepHours}
-                onChange={(e) =>
-                  handleNumberChange("sleepHours", e.target.value)
-                }
-                placeholder="e.g., 7.5"
-                className="py-5 text-gray-900 placeholder:text-gray-500 bg-white border border-purple-200 focus:border-purple-600 focus:ring-2 focus:ring-purple-300 focus:outline-none"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="caffeineCups" className="text-gray-700 text-base">
-                How much caffeine (in cups) did you consume today?
-              </Label>
-              <Input
-                id="caffeineCups"
-                type="text"
-                inputMode="decimal"
-                value={formData.caffeineCups}
-                onChange={(e) =>
-                  handleNumberChange("caffeineCups", e.target.value)
-                }
-                placeholder="e.g., 2"
-                className="py-5 text-gray-900 placeholder:text-gray-500 bg-white border border-purple-200 focus:border-purple-600 focus:ring-2 focus:ring-purple-300 focus:outline-none"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label
-                htmlFor="physicalActivity"
-                className="text-gray-700 text-base"
+      ) : hasCheckedInToday ? (
+        <div className="max-w-4xl mx-auto px-6 py-12">
+          <div className="text-center py-20">
+            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <svg
+                className="w-10 h-10 text-green-600"
+                fill="none"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
               >
-                Physical activity today (in hours)
-              </Label>
-              <Input
-                id="physicalActivity"
-                type="text"
-                inputMode="numeric"
-                value={formData.physicalActivity}
-                onChange={(e) =>
-                  handleNumberChange("physicalActivity", e.target.value)
-                }
-                placeholder="e.g., 2"
-                className="py-5 text-gray-900 placeholder:text-gray-500 bg-white border border-purple-200 focus:border-purple-600 focus:ring-2 focus:ring-purple-300 focus:outline-none"
-              />
+                <path d="M5 13l4 4L19 7"></path>
+              </svg>
             </div>
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              You've already completed today's check-in!
+            </h1>
+            <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
+              Continue to the dashboard to see your results and track your
+              progress.
+            </p>
+            <Button
+              onClick={() => router.push("/Dashboard")}
+              className="bg-purple-600 hover:bg-black hover:shadow-xl hover:shadow-purple-600 text-white text-lg px-8 py-6 transition-all"
+            >
+              Go to Dashboard
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="max-w-4xl mx-auto px-6 py-12">
+          <div className="text-center mb-8">
+            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 mt-10">
+              Daily Check-In
+            </h1>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              Help us understand your day better by sharing a few details about
+              your activities and feelings.
+            </p>
+          </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="screenTime" className="text-gray-700 text-base">
-                Screen time today (in hours)
-              </Label>
-              <Input
-                id="screenTime"
-                type="text"
-                inputMode="decimal"
-                value={formData.screenTime}
-                onChange={(e) =>
-                  handleNumberChange("screenTime", e.target.value)
-                }
-                placeholder="e.g., 6"
-                className="py-5 text-gray-900 placeholder:text-gray-500 bg-white border border-purple-200 focus:border-purple-600 focus:ring-2 focus:ring-purple-300 focus:outline-none"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label
-                htmlFor="workStudyHours"
-                className="text-gray-700 text-base"
-              >
-                Work/study load today (in hours)
-              </Label>
-              <Input
-                id="workStudyHours"
-                type="text"
-                inputMode="decimal"
-                value={formData.workStudyHours}
-                onChange={(e) =>
-                  handleNumberChange("workStudyHours", e.target.value)
-                }
-                placeholder="e.g., 8"
-                className="py-5 text-gray-900 placeholder:text-gray-500 bg-white border border-purple-200 focus:border-purple-600 focus:ring-2 focus:ring-purple-300 focus:outline-none"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-gray-700 text-base">
-                Are you a smoker?
-              </Label>
-              <div className="flex items-center space-x-6">
-                <RadioButton
-                  label="Yes"
-                  name="smokingHabit"
-                  value="Yes"
-                  checked={formData.smokingHabit === "Yes"}
-                  onChange={(value) => handleChange("smokingHabit", value)}
-                />
-                <RadioButton
-                  label="No"
-                  name="smokingHabit"
-                  value="No"
-                  checked={formData.smokingHabit === "No"}
-                  onChange={(value) => handleChange("smokingHabit", value)}
+          <Card className="p-8 md:p-10 shadow-2xl border-purple-200">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="sleepHours" className="text-gray-700 text-base">
+                  How many hours did you sleep last night?
+                </Label>
+                <Input
+                  id="sleepHours"
+                  type="text"
+                  inputMode="decimal"
+                  value={formData.sleepHours}
+                  onChange={(e) =>
+                    handleNumberChange("sleepHours", e.target.value)
+                  }
+                  placeholder="e.g., 7.5"
+                  className="py-5 text-gray-900 placeholder:text-gray-500 bg-white border border-purple-200 focus:border-purple-600 focus:ring-2 focus:ring-purple-300 focus:outline-none"
                 />
               </div>
-            </div>
 
-            <div className="space-y-2 pt-4">
-              <Label
-                htmlFor="dayDescription"
-                className="text-gray-700 text-base"
-              >
-                Tell us about your day
-              </Label>
-              <textarea
-                id="dayDescription"
-                value={formData.dayDescription}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    dayDescription: e.target.value,
-                  }))
-                }
-                placeholder="Help us understand your day better by sharing a few details about your activities and feelings."
-                rows={6}
-                className="w-full text-gray-900 bg-white placeholder:text-gray-500 rounded-md border border-purple-200 px-3 py-3 text-base transition-[color,box-shadow] outline-none resize-none focus:border-purple-600 focus:ring-purple-600/50 focus:ring-[3px]"
-              />
-            </div>
+              <div className="space-y-2">
+                <Label
+                  htmlFor="caffeineCups"
+                  className="text-gray-700 text-base"
+                >
+                  How much caffeine (in cups) did you consume today?
+                </Label>
+                <Input
+                  id="caffeineCups"
+                  type="text"
+                  inputMode="decimal"
+                  value={formData.caffeineCups}
+                  onChange={(e) =>
+                    handleNumberChange("caffeineCups", e.target.value)
+                  }
+                  placeholder="e.g., 2"
+                  className="py-5 text-gray-900 placeholder:text-gray-500 bg-white border border-purple-200 focus:border-purple-600 focus:ring-2 focus:ring-purple-300 focus:outline-none"
+                />
+              </div>
 
-            <div className="pt-6">
-              <Button
-                type="submit"
-                className="w-full bg-purple-600 hover:bg-black hover:shadow-xl hover:shadow-purple-600 text-white text-lg py-6 transition-all"
-              >
-                Submit Check-In
-              </Button>
-            </div>
-          </form>
-        </Card>
+              <div className="space-y-2">
+                <Label
+                  htmlFor="physicalActivity"
+                  className="text-gray-700 text-base"
+                >
+                  Physical activity today (in hours)
+                </Label>
+                <Input
+                  id="physicalActivity"
+                  type="text"
+                  inputMode="numeric"
+                  value={formData.physicalActivity}
+                  onChange={(e) =>
+                    handleNumberChange("physicalActivity", e.target.value)
+                  }
+                  placeholder="e.g., 2"
+                  className="py-5 text-gray-900 placeholder:text-gray-500 bg-white border border-purple-200 focus:border-purple-600 focus:ring-2 focus:ring-purple-300 focus:outline-none"
+                />
+              </div>
 
-        <div className="text-center mt-8">
-          <p className="text-gray-600">
-            Your responses help us provide personalized insights about your
-            emotional wellbeing.
-          </p>
+              <div className="space-y-2">
+                <Label htmlFor="screenTime" className="text-gray-700 text-base">
+                  Screen time today (in hours)
+                </Label>
+                <Input
+                  id="screenTime"
+                  type="text"
+                  inputMode="decimal"
+                  value={formData.screenTime}
+                  onChange={(e) =>
+                    handleNumberChange("screenTime", e.target.value)
+                  }
+                  placeholder="e.g., 6"
+                  className="py-5 text-gray-900 placeholder:text-gray-500 bg-white border border-purple-200 focus:border-purple-600 focus:ring-2 focus:ring-purple-300 focus:outline-none"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label
+                  htmlFor="workStudyHours"
+                  className="text-gray-700 text-base"
+                >
+                  Work/study load today (in hours)
+                </Label>
+                <Input
+                  id="workStudyHours"
+                  type="text"
+                  inputMode="decimal"
+                  value={formData.workStudyHours}
+                  onChange={(e) =>
+                    handleNumberChange("workStudyHours", e.target.value)
+                  }
+                  placeholder="e.g., 8"
+                  className="py-5 text-gray-900 placeholder:text-gray-500 bg-white border border-purple-200 focus:border-purple-600 focus:ring-2 focus:ring-purple-300 focus:outline-none"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-gray-700 text-base">
+                  Are you a smoker?
+                </Label>
+                <div className="flex items-center space-x-6">
+                  <RadioButton
+                    label="Yes"
+                    name="smokingHabit"
+                    value="Yes"
+                    checked={formData.smokingHabit === "Yes"}
+                    onChange={(value) => handleChange("smokingHabit", value)}
+                  />
+                  <RadioButton
+                    label="No"
+                    name="smokingHabit"
+                    value="No"
+                    checked={formData.smokingHabit === "No"}
+                    onChange={(value) => handleChange("smokingHabit", value)}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2 pt-4">
+                <Label
+                  htmlFor="dayDescription"
+                  className="text-gray-700 text-base"
+                >
+                  Tell us about your day
+                </Label>
+                <textarea
+                  id="dayDescription"
+                  value={formData.dayDescription}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      dayDescription: e.target.value,
+                    }))
+                  }
+                  placeholder="Help us understand your day better by sharing a few details about your activities and feelings."
+                  rows={6}
+                  className="w-full text-gray-900 bg-white placeholder:text-gray-500 rounded-md border border-purple-200 px-3 py-3 text-base transition-[color,box-shadow] outline-none resize-none focus:border-purple-600 focus:ring-purple-600/50 focus:ring-[3px]"
+                />
+              </div>
+
+              <div className="pt-6">
+                <Button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full bg-purple-600 hover:bg-black hover:shadow-xl hover:shadow-purple-600 text-white text-lg py-6 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-purple-600"
+                >
+                  {isSubmitting ? "Submitting..." : "Submit Check-In"}
+                </Button>
+              </div>
+            </form>
+          </Card>
+
+          <div className="text-center mt-8">
+            <p className="text-gray-600">
+              Your responses help us provide personalized insights about your
+              emotional wellbeing.
+            </p>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

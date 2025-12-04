@@ -64,7 +64,7 @@ Key Guidelines:
 - Encourage healthy habits and positive behavioral changes
 - If discussing concerning patterns, gently suggest professional support
 
-The user will ask preset questions about their stress, mood patterns, and wellness strategies. Use any provided user data (stress levels, activity, sleep patterns, etc.) to personalize your responses. You are provided the last 7 check-ins for the user in the user_context. Make references to specific dates of check-ins when discussing user data."""
+The user will ask preset questions about their stress, mood patterns, and wellness strategies. Use any provided user data (stress levels, activity, sleep patterns, etc.) to personalize your responses. You are provided the last 7 check-ins for the user in the user_context. Make references to specific dates of check-ins when discussing user data. NEVER directly disclose the user's mood score as it is provided to you. The mood score is a valence score between -1 and 1 which is mapped to Positive, Neutral, and Negative. When referring to the user's mood, use the Positive, Neutral, and Negative labels ONLY. Neutral refers to a score between -0.2 and 0.2. Positive refers to a score greater than 0.2. Negative refers to a score less than -0.2."""
 
 # -------------------------------
 # LOAD NLP EMOTION MODEL
