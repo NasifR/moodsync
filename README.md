@@ -16,23 +16,21 @@ MindSight solves this by analyzing both:
 Using machine learning and natural language processing (NLP), the platform identifies **emotional patterns, stress trends, and possible triggers** over time
 
 **How It Works**
-1. The user completes a daily survey and optional journal entry
+1. **User Input**
+   - Daily survey
+   - Optional journal entry
 
-2. Data is sent to the backend for:  
+2. **Backend Processing**
+   - Stress prediction (numeric data)
+   - Emotion detection (text analysis)
 
-  * Stress prediction (numeric data)
+3. **Data Storage**
+   - Results stored securely in the database
 
-  * Emotion detection (text analysis)
-
-3. Results are stored securely in the database
-
-4. The dashboard displays:
-
-* Stress trends
-
-* Emotion distributions
-
-* Historical patterns
+4. **Dashboard Output**
+   - Stress trends
+   - Emotion distributions
+   - Historical patterns
 
   **Tech Stack**
 
