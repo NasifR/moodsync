@@ -15,6 +15,20 @@ MindSight solves this by analyzing both:
 
 Using machine learning and natural language processing (NLP), the platform identifies **emotional patterns, stress trends, and possible triggers** over time
 
+
+## **Key Features**
+* Daily lifestyle and mood check-ins
+
+* Journal entry analysis using NLP
+
+* Interactive dashboard with charts and trends
+
+* Stress level prediction using machine learning
+
+* Secure authentication and user-specific data storage
+
+* Weekly stress and emotion visualizations
+  
 ## **How It Works**
 1. **User Input**
    - Daily survey
