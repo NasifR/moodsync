@@ -57,7 +57,7 @@ Using machine learning and natural language processing (NLP), the platform ident
 
 * **Cloud Firestore** for secure user data storage
 
-**Machine Learning Models**
+## **Machine Learning Models**
 * **Emotion Detection**
 Uses a pretrained **BERT transformer model** to analyze journal text and identify emotional tone.
 
