@@ -21,9 +21,9 @@ Using machine learning and natural language processing (NLP), the platform ident
 
 2. Data is sent to the backend for:
 
-* Stress prediction (numeric data)
+  * Stress prediction (numeric data)
 
-* Emotion detection (text analysis)
+  * Emotion detection (text analysis)
 
 3. Results are stored securely in the database
 
