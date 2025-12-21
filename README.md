@@ -32,7 +32,7 @@ Using machine learning and natural language processing (NLP), the platform ident
    - Emotion distributions
    - Historical patterns
 
-  **Tech Stack**
+##  **Tech Stack**
 
 **Frontend**
 
