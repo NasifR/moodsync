@@ -42,8 +42,8 @@ Using machine learning and natural language processing (NLP), the platform ident
 
 * **Recharts** for data visualization
 
-  **Backend & ML**
- * **FastAPI (Python)
+**Backend & ML**     
+* **FastAPI (Python)**
 
 * **BERT-based NLP model** for emotion detection
 
