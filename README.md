@@ -4,7 +4,7 @@
 Instead of just collecting journal entries and survey data, MindSight turns daily check-ins into **meaningful insights and visual patterns.**
 
 
-**Project Overview**
+## **Project Overview**
 
 Many mental health and journaling apps only store data without explaining what it means.
 MindSight solves this by analyzing both:
@@ -15,7 +15,7 @@ MindSight solves this by analyzing both:
 
 Using machine learning and natural language processing (NLP), the platform identifies **emotional patterns, stress trends, and possible triggers** over time
 
-**How It Works**
+## **How It Works**
 1. **User Input**
    - Daily survey
    - Optional journal entry
