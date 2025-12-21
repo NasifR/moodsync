@@ -16,10 +16,9 @@ MindSight solves this by analyzing both:
 Using machine learning and natural language processing (NLP), the platform identifies **emotional patterns, stress trends, and possible triggers** over time
 
 **How It Works**
-
 1. The user completes a daily survey and optional journal entry
 
-2. Data is sent to the backend for:
+2. Data is sent to the backend for:  
 
   * Stress prediction (numeric data)
 
@@ -33,4 +32,38 @@ Using machine learning and natural language processing (NLP), the platform ident
 
 * Emotion distributions
 
-* Historical patterns 
+* Historical patterns
+
+  **Tech Stack**
+
+**Frontend**
+
+* Next.js + React
+
+* Tailwind CSS, Radix UI, Framer Motion
+
+* Recharts for data visualization
+
+  **Backend & ML**
+  FastAPI (Python)
+
+* BERT-based NLP model for emotion detection
+
+* Random Forest for stress prediction
+
+* Google Colab for model training (GPU support)
+
+**Database & Auth**
+
+* Firebase Authentication
+
+* Cloud Firestore for secure user data storage
+
+**Machine Learning Models**
+* **Emotion Detection**
+Uses a pretrained **BERT transformer model** to analyze journal text and identify emotional tone.
+
+* **Stress Prediction**
+Uses structured lifestyle data (sleep, caffeine, screen time, etc.) to estimate stress levels.
+
+Pretrained models were chosen for **better performance, reliability, and scalability** compared to custom-trained models 
