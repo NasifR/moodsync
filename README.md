@@ -36,26 +36,26 @@ Using machine learning and natural language processing (NLP), the platform ident
 
 **Frontend**
 
-* Next.js + React
+* **Next.js + React**
 
-* Tailwind CSS, Radix UI, Framer Motion
+* **Tailwind CSS, Radix UI, Framer Motion**
 
-* Recharts for data visualization
+* **Recharts** for data visualization
 
   **Backend & ML**
-  FastAPI (Python)
+ * **FastAPI (Python)
 
-* BERT-based NLP model for emotion detection
+* **BERT-based NLP model** for emotion detection
 
-* Random Forest for stress prediction
+* **Random Forest** for stress prediction
 
-* Google Colab for model training (GPU support)
+* **Google Colab** for model training (GPU support)
 
 **Database & Auth**
 
-* Firebase Authentication
+* **Firebase Authentication**
 
-* Cloud Firestore for secure user data storage
+* **Cloud Firestore** for secure user data storage
 
 **Machine Learning Models**
 * **Emotion Detection**
